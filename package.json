@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "measure-size": "node scripts/measure-bundle-size.js",
+    "setup-hooks": "node scripts/setup-hooks.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
