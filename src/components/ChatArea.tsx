@@ -1,5 +1,7 @@
+import { useState, useEffect } from "preact/hooks";
 import type { RefObject } from "preact";
 import type { Chat } from "@/types";
+import { Message } from "./Message";
 
 interface ChatAreaProps {
   chat: Chat;
@@ -11,6 +13,7 @@ interface ChatAreaProps {
   onSendMessage: () => void;
   onStopGeneration: () => void;
   onWheel: (e: WheelEvent) => void;
+  onEditMessage: (messageIndex: number, newContent: string) => void;
 }
 
 export function ChatArea({
@@ -23,31 +26,56 @@ export function ChatArea({
   onSendMessage,
   onStopGeneration,
   onWheel,
+  onEditMessage,
 }: ChatAreaProps) {
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState("");
+
+  // Reset edit state when chat changes
+  useEffect(() => {
+    setEditingMessageIndex(null);
+    setEditContent("");
+  }, [chat.id]);
+
+  const handleStartEdit = (index: number, content: string) => {
+    setEditingMessageIndex(index);
+    setEditContent(content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageIndex(null);
+    setEditContent("");
+  };
+
+  const handleSaveEdit = (index: number, newContent: string) => {
+    if (!newContent.trim()) {
+      handleCancelEdit();
+      return;
+    }
+
+    setEditingMessageIndex(null);
+    setEditContent("");
+    onEditMessage(index, newContent);
+  };
+
   return (
     <>
       {/* Messages */}
       <div ref={messagesContainerRef} onWheel={onWheel} class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto space-y-4">
           {chat.messages.map((msg, idx) => (
-            <div
+            <Message
               key={idx}
-              class={`flex ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                class={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                  msg.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                <div class="whitespace-pre-wrap break-words text-sm">
-                  {msg.content}
-                </div>
-              </div>
-            </div>
+              message={msg}
+              index={idx}
+              isEditing={editingMessageIndex === idx}
+              editContent={editContent}
+              canEdit={msg.role === "user" && !isStreaming}
+              onStartEdit={handleStartEdit}
+              onCancelEdit={handleCancelEdit}
+              onSaveEdit={handleSaveEdit}
+              onEditContentChange={setEditContent}
+            />
           ))}
           <div ref={messagesEndRef} />
         </div>

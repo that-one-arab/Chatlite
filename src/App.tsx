@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import { appDataDir } from "@tauri-apps/api/path";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
-import type { Chat, Settings } from "@/types";
+import type { Chat, Settings, Message } from "@/types";
 import { useModels } from "@/hooks/useModels";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { Sidebar } from "@/components/Sidebar";
@@ -210,30 +210,7 @@ The title would be used as the chat title in the sidebar.
     }
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !currentChatId || !selectedModel || isStreaming) return;
-
-    const userMessage = { role: "user" as const, content: input };
-    const assistantMessage = { role: "assistant" as const, content: "" };
-
-    // Update chat with user message
-    setChats((prev) =>
-      prev.map((c) => {
-        if (c.id === currentChatId) {
-          const newMessages = [...c.messages, userMessage, assistantMessage];
-
-          // Set title from first message
-          if (c.messages.length === 0) {
-            updateChatTitle(c.id, input, selectedModel);
-          }
-
-          return { ...c, messages: newMessages, model: selectedModel };
-        }
-        return c;
-      })
-    );
-
-    setInput("");
+  const streamResponse = async (conversationHistory: Message[]) => {
     setIsStreaming(true);
     setAutoScroll(true);
 
@@ -246,7 +223,7 @@ The title would be used as the chat title in the sidebar.
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: selectedModel,
-          messages: [...(currentChat?.messages || []), userMessage],
+          messages: conversationHistory,
           stream: true,
         }),
         signal: controller.signal,
@@ -295,6 +272,72 @@ The title would be used as the chat title in the sidebar.
       setIsStreaming(false);
       abortControllerRef.current = null;
     }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || !currentChatId || !selectedModel || isStreaming) return;
+
+    const userMessage = { role: "user" as const, content: input };
+    const assistantMessage = { role: "assistant" as const, content: "" };
+
+    // Update chat with user message
+    setChats((prev) =>
+      prev.map((c) => {
+        if (c.id === currentChatId) {
+          const newMessages = [...c.messages, userMessage, assistantMessage];
+
+          // Set title from first message
+          if (c.messages.length === 0) {
+            updateChatTitle(c.id, input, selectedModel);
+          }
+
+          return { ...c, messages: newMessages, model: selectedModel };
+        }
+        return c;
+      })
+    );
+
+    const currentMessages = currentChat?.messages || [];
+    setInput("");
+
+    await streamResponse([...currentMessages, userMessage]);
+  };
+
+  const editMessage = async (messageIndex: number, newContent: string) => {
+    if (!currentChatId || isStreaming || !newContent.trim()) return;
+
+    const chat = chats.find((c) => c.id === currentChatId);
+    if (!chat) return;
+
+    // Step 1: Truncate messages at edit point
+    const truncatedMessages = chat.messages.slice(0, messageIndex + 1);
+    truncatedMessages[messageIndex] = {
+      role: "user",
+      content: newContent,
+    };
+
+    // Step 2: Add empty assistant message for streaming
+    const messagesWithAssistant = [
+      ...truncatedMessages,
+      { role: "assistant" as const, content: "" },
+    ];
+
+    // Step 3: Update chat state
+    setChats((prev) =>
+      prev.map((c) =>
+        c.id === currentChatId
+          ? { ...c, messages: messagesWithAssistant }
+          : c
+      )
+    );
+
+    // Step 4: Regenerate title if editing first message
+    if (messageIndex === 0) {
+      updateChatTitle(currentChatId, newContent, selectedModel);
+    }
+
+    // Step 5: Stream new response
+    await streamResponse(truncatedMessages);
   };
 
   const stopGeneration = () => {
@@ -356,6 +399,7 @@ The title would be used as the chat title in the sidebar.
             onSendMessage={sendMessage}
             onStopGeneration={stopGeneration}
             onWheel={handleWheel}
+            onEditMessage={editMessage}
           />
         ) : (
           <EmptyState />
