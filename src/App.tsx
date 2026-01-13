@@ -34,6 +34,17 @@ function App() {
 
   const currentChat = chats.find((c) => c.id === currentChatId);
 
+  // Select a chat and update the model
+  const selectChat = (chatId: string | null) => {
+    setCurrentChatId(chatId);
+    if (chatId) {
+      const chat = chats.find((c) => c.id === chatId);
+      if (chat && chat.model) {
+        setSelectedModel(chat.model);
+      }
+    }
+  };
+
   // Initialize app
   useEffect(() => {
     initApp();
@@ -96,6 +107,9 @@ function App() {
         setChats(parsed);
         if (parsed.length > 0) {
           setCurrentChatId(parsed[0].id);
+          if (parsed[0].model) {
+            setSelectedModel(parsed[0].model);
+          }
         }
       }
     } catch (error) {
@@ -176,7 +190,14 @@ function App() {
     setChats(filtered);
 
     if (currentChatId === chatId) {
-      setCurrentChatId(filtered.length > 0 ? filtered[0].id : null);
+      if (filtered.length > 0) {
+        setCurrentChatId(filtered[0].id);
+        if (filtered[0].model) {
+          setSelectedModel(filtered[0].model);
+        }
+      } else {
+        setCurrentChatId(null);
+      }
     }
   };
 
@@ -327,7 +348,7 @@ function App() {
                   ? "bg-gray-100 dark:bg-gray-700"
                   : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
               }`}
-              onClick={() => setCurrentChatId(chat.id)}
+              onClick={() => selectChat(chat.id)}
             >
               <div class="flex items-center justify-between gap-2">
                 <span class="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">
