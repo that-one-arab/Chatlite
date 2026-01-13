@@ -174,10 +174,40 @@ function App() {
     }
   };
 
-  const updateChatTitle = (chatId: string, firstMessage: string) => {
-    const title =
-      firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "");
-    setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title } : c)));
+  const updateChatTitle = async (chatId: string, firstMessage: string, model: string) => {
+    try {
+      const response = await fetch("http://localhost:11434/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: `
+Generate a concise title (max 50 characters) for a conversation based on the user's first message. 
+Respond with ONLY the title, no quotes or punctuation.
+The title would be used as the chat title in the sidebar.
+`,
+            },
+            {
+              role: "user",
+              content: firstMessage,
+            },
+          ],
+          stream: false,
+        }),
+      });
+
+      const data = await response.json();
+      const generatedTitle = data.message?.content?.trim() || firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "");
+
+      setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title: generatedTitle } : c)));
+    } catch (error) {
+      console.error("Error generating title:", error);
+      const fallbackTitle = firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "");
+      setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title: fallbackTitle } : c)));
+    }
   };
 
   const sendMessage = async () => {
@@ -194,7 +224,7 @@ function App() {
 
           // Set title from first message
           if (c.messages.length === 0) {
-            updateChatTitle(c.id, input);
+            updateChatTitle(c.id, input, selectedModel);
           }
 
           return { ...c, messages: newMessages, model: selectedModel };

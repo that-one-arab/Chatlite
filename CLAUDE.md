@@ -26,7 +26,7 @@ src/
 
 ### Chat Management
 - Multiple conversations with persistent history
-- Auto-titled from first message (30 chars)
+- Auto-titled via LLM based on first message topic (max 50 chars)
 - Delete conversations
 - Stored in `chats.json` at configurable path
 
@@ -52,7 +52,7 @@ src/
 ```typescript
 Chat {
   id: string          // timestamp
-  title: string       // first 30 chars of first message
+  title: string       // LLM-generated title from first message
   messages: Message[]
   model: string       // ollama model name
 }
