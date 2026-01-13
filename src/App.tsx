@@ -29,7 +29,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
+  const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const currentChat = chats.find((c) => c.id === currentChatId);
@@ -156,8 +158,30 @@ function App() {
 
   // Auto scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentChat?.messages]);
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [currentChat?.messages, autoScroll]);
+
+  // Detect user scrolling during streaming
+  const handleWheel = (e: WheelEvent) => {
+    if (!isStreaming) return;
+
+    if (autoScroll && e.deltaY < 0) {
+      // User scrolled up, disable auto-scroll
+      setAutoScroll(false);
+    } else if (!autoScroll && e.deltaY > 0) {
+      // User scrolled down, check if at bottom to re-enable auto-scroll
+      const container = messagesContainerRef.current;
+      if (container) {
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        if (distanceFromBottom < 50) {
+          setAutoScroll(true);
+        }
+      }
+    }
+  };
 
   const fetchModels = async () => {
     try {
@@ -232,6 +256,7 @@ function App() {
 
     setInput("");
     setIsStreaming(true);
+    setAutoScroll(true);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -403,7 +428,7 @@ function App() {
         {currentChat ? (
           <>
             {/* Messages */}
-            <div class="flex-1 overflow-y-auto p-4">
+            <div ref={messagesContainerRef} onWheel={handleWheel} class="flex-1 overflow-y-auto p-4">
               <div class="max-w-3xl mx-auto space-y-4">
                 {currentChat.messages.map((msg, idx) => (
                   <div
