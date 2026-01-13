@@ -6,6 +6,22 @@ Desktop chat interface for Ollama models. Built with Tauri + Preact + Tailwind.
 
 **Stack**: Tauri (Rust), Preact, Tailwind CSS, Ollama API
 
+**Structure**: Modular component-based architecture with path aliases (`@/`)
+
+```
+src/
+├── types/index.ts           # TypeScript interfaces
+├── hooks/
+│   ├── useModels.ts         # Model fetching & selection
+│   └── useAutoScroll.ts     # Auto-scroll during streaming
+├── components/
+│   ├── Sidebar.tsx          # Chat list + model selector
+│   ├── ChatArea.tsx         # Messages + input area
+│   ├── EmptyState.tsx       # No chat selected view
+│   └── SettingsModal.tsx    # Settings dialog
+└── App.tsx                  # Main orchestrator (~300 lines)
+```
+
 ## Features
 
 ### Chat Management
