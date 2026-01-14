@@ -303,8 +303,8 @@ The title would be used as the chat title in the sidebar.
   const sendMessage = async () => {
     if (!input.trim() || !currentChatId || !selectedModel || isStreaming) return;
 
-    const userMessage = { role: "user" as const, content: input };
-    const assistantMessage = { role: "assistant" as const, content: "" };
+    const userMessage = { role: "user" as const, content: input, timestamp: Date.now() };
+    const assistantMessage = { role: "assistant" as const, content: "", timestamp: Date.now() };
 
     // Update chat with user message
     setChats((prev) =>
@@ -340,12 +340,13 @@ The title would be used as the chat title in the sidebar.
     truncatedMessages[messageIndex] = {
       role: "user",
       content: newContent,
+      timestamp: Date.now(),
     };
 
     // Step 2: Add empty assistant message for streaming
     const messagesWithAssistant = [
       ...truncatedMessages,
-      { role: "assistant" as const, content: "" },
+      { role: "assistant" as const, content: "", timestamp: Date.now() },
     ];
 
     // Step 3: Update chat state

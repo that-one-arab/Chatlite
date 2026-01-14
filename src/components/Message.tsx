@@ -17,6 +17,23 @@ interface MessageProps {
   onEditContentChange: (content: string) => void;
 }
 
+function formatTimestamp(timestamp?: number): string | null {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (isToday) {
+    return timeStr;
+  }
+  const dateStr = date.toLocaleDateString([], { month: "short", day: "numeric" });
+  return `${dateStr}, ${timeStr}`;
+}
+
 export function Message({
   message,
   index,
@@ -33,8 +50,10 @@ export function Message({
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
+  const [showTimestamp, setShowTimestamp] = useState(false);
   const isThinking = !isUser && isLastMessage && isStreaming && !message.content;
   const hasThinking = !isUser && message.thinking;
+  const formattedTimestamp = formatTimestamp(message.timestamp);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -50,7 +69,18 @@ export function Message({
             ? "bg-blue-600 text-white"
             : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
         }`}
+        onMouseEnter={() => setShowTimestamp(true)}
+        onMouseLeave={() => setShowTimestamp(false)}
       >
+        {/* Timestamp tooltip */}
+        {/* Position below for first message to avoid being cropped by container top edge */}
+        {showTimestamp && formattedTimestamp && (
+          <div
+            className={`absolute ${index === 0 ? "-bottom-8" : "-top-8"} ${isUser ? "right-0" : "left-0"} px-2 py-1 text-xs rounded bg-gray-800 dark:bg-gray-700 text-white whitespace-nowrap z-10`}
+          >
+            {formattedTimestamp}
+          </div>
+        )}
         {/* Edit button (only for user messages when canEdit is true) */}
         {canEdit && !isEditing && (
           <button

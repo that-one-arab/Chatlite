@@ -2,6 +2,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   thinking?: string;
+  timestamp?: number;
 }
 
 export interface Chat {

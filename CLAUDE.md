@@ -17,8 +17,10 @@ src/
 ├── components/
 │   ├── Sidebar.tsx          # Chat list + model selector
 │   ├── ChatArea.tsx         # Messages + input area
+│   ├── Message.tsx          # Message display + edit + thinking
 │   ├── EmptyState.tsx       # No chat selected view
-│   └── SettingsModal.tsx    # Settings dialog
+│   ├── SettingsModal.tsx    # App settings dialog
+│   └── ChatSettingsModal.tsx # Per-conversation settings
 └── App.tsx                  # Main orchestrator (~300 lines)
 ```
 
@@ -27,6 +29,7 @@ src/
 ### Chat Management
 - Multiple conversations with persistent history
 - Auto-titled via LLM based on first message topic (max 50 chars)
+- Per-conversation system prompt (via settings icon in chat header)
 - Delete conversations
 - Stored in `chats.json` at configurable path
 
@@ -37,9 +40,15 @@ src/
 - Last selected model persisted globally in `settings.json`
 
 ### Streaming
-- Raw streaming (no markdown parsing)
 - Ollama `/api/chat` endpoint with `stream: true`
+- Markdown rendered live via `markdown-to-jsx`
+- Thinking indicator and collapsible thinking tokens display (for reasoning models)
 - Stop generation button (AbortController)
+
+### Messages
+- User messages editable (triggers regeneration from that point)
+- Copy button on assistant messages
+- Markdown code blocks with syntax styling
 
 ### Auto-scroll Behavior
 - Enabled by default when generating
@@ -55,11 +64,13 @@ Chat {
   title: string       // LLM-generated title from first message
   messages: Message[]
   model: string       // ollama model name
+  systemPrompt?: string
 }
 
 Message {
   role: "user" | "assistant"
   content: string
+  thinking?: string
 }
 
 Settings {
