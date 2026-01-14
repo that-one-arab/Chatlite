@@ -1,3 +1,5 @@
+import type { ComponentChildren } from "preact";
+import Markdown from "markdown-to-jsx";
 import type { Message as MessageType } from "@/types";
 
 interface MessageProps {
@@ -47,8 +49,49 @@ export function Message({
 
         {/* Display mode */}
         {!isEditing && (
-          <div className="whitespace-pre-wrap break-words text-sm">
-            {message.content}
+          <div className={`break-words text-sm ${isUser ? "whitespace-pre-wrap" : "prose prose-sm dark:prose-invert max-w-none"}`}>
+            {isUser ? (
+              message.content
+            ) : (
+              <Markdown
+                options={{
+                  forceBlock: true,
+                  overrides: {
+                    pre: {
+                      props: {
+                        className: "bg-gray-900 dark:bg-gray-950 text-gray-100 p-3 rounded-lg overflow-x-auto my-2",
+                      },
+                    },
+                    code: {
+                      component: ({ className, children, ...props }: { className?: string; children?: ComponentChildren; [key: string]: unknown }) => {
+                        const isInline = !className;
+                        return isInline ? (
+                          <code
+                            className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm"
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    },
+                    a: {
+                      props: {
+                        className: "text-blue-500 hover:underline",
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                      },
+                    },
+                  },
+                }}
+              >
+                {message.content}
+              </Markdown>
+            )}
           </div>
         )}
 

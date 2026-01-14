@@ -12,9 +12,11 @@
     "setup-hooks": "node scripts/setup-hooks.js"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-opener": "^2",
+    "markdown-to-jsx": "^9.5.7",
     "preact": "^10.25.1"
   },
   "devDependencies": {
