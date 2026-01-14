@@ -46,10 +46,10 @@ function App() {
   const initApp = async () => {
     try {
       const appData = await appDataDir();
-      const defaultPath = `${appData}llm-chats`;
+      const defaultPath = `${appData}/llm-chats`;
 
       // Load settings
-      const settingsPath = `${appData}settings.json`;
+      const settingsPath = `${appData}/settings.json`;
       let settings: Settings = {
         storagePath: defaultPath,
         lastModel: "",
@@ -82,8 +82,8 @@ function App() {
       // Load chats
       await loadChats(settings.storagePath);
 
-      // Fetch models
-      await fetchModels();
+      // Fetch models (pass lastModel to avoid stale closure issue)
+      await fetchModels(settings.lastModel);
     } catch (error) {
       console.error("Init error:", error);
     }
@@ -122,7 +122,7 @@ function App() {
   const saveSettings = async (model: string, path: string) => {
     try {
       const appData = await appDataDir();
-      const settingsPath = `${appData}settings.json`;
+      const settingsPath = `${appData}/settings.json`;
       const settings: Settings = {
         storagePath: path,
         lastModel: model,
