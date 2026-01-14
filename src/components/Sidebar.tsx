@@ -1,3 +1,4 @@
+import type { RefObject } from "preact";
 import type { Chat } from "@/types";
 
 interface SidebarProps {
@@ -5,11 +6,13 @@ interface SidebarProps {
   currentChatId: string | null;
   selectedModel: string;
   models: string[];
+  modelSelectRef?: RefObject<HTMLSelectElement>;
   onCreateChat: () => void;
   onSelectChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
   onModelChange: (model: string) => void;
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }
 
 export function Sidebar({
@@ -17,11 +20,13 @@ export function Sidebar({
   currentChatId,
   selectedModel,
   models,
+  modelSelectRef,
   onCreateChat,
   onSelectChat,
   onDeleteChat,
   onModelChange,
   onOpenSettings,
+  onOpenHelp,
 }: SidebarProps) {
   return (
     <div class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
@@ -70,6 +75,7 @@ export function Sidebar({
             Model
           </label>
           <select
+            ref={modelSelectRef}
             value={selectedModel}
             onChange={(e) => onModelChange(e.currentTarget.value)}
             class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200"
@@ -82,12 +88,19 @@ export function Sidebar({
           </select>
         </div>
 
-        <div class="p-3 pt-0">
+        <div class="p-3 pt-0 flex gap-2">
           <button
             onClick={onOpenSettings}
-            class="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            class="flex-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
           >
             ⚙️ Settings
+          </button>
+          <button
+            onClick={onOpenHelp}
+            class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            title="Keyboard shortcuts"
+          >
+            ?
           </button>
         </div>
       </div>

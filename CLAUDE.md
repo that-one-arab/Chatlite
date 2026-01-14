@@ -13,15 +13,17 @@ src/
 ├── types/index.ts           # TypeScript interfaces
 ├── hooks/
 │   ├── useModels.ts         # Model fetching & selection
-│   └── useAutoScroll.ts     # Auto-scroll during streaming
+│   ├── useAutoScroll.ts     # Auto-scroll during streaming
+│   └── useHotkeys.ts        # Global keyboard shortcuts
 ├── components/
 │   ├── Sidebar.tsx          # Chat list + model selector
 │   ├── ChatArea.tsx         # Messages + input area
 │   ├── Message.tsx          # Message display + edit + thinking
 │   ├── EmptyState.tsx       # No chat selected view
 │   ├── SettingsModal.tsx    # App settings dialog
-│   └── ChatSettingsModal.tsx # Per-conversation settings
-└── App.tsx                  # Main orchestrator (~300 lines)
+│   ├── ChatSettingsModal.tsx # Per-conversation settings
+│   └── HelpModal.tsx        # Keyboard shortcuts reference
+└── App.tsx                  # Main orchestrator
 ```
 
 ## Features
@@ -49,12 +51,24 @@ src/
 - User messages editable (triggers regeneration from that point)
 - Copy button on assistant messages
 - Markdown code blocks with syntax styling
+- Hover to show timestamp (time only if today, date + time otherwise)
 
 ### Auto-scroll Behavior
 - Enabled by default when generating
 - Breaks when user scrolls up (wheel deltaY < 0)
 - Re-enables when user scrolls back to bottom (<50px from bottom)
 - Resets on new message
+
+### Keyboard Shortcuts
+- `Cmd/Ctrl + K` - Focus message input
+- `Cmd/Ctrl + N` - New conversation
+- `Cmd/Ctrl + M` - Open model selector
+- `Cmd/Ctrl + ,` - Open settings
+- `Cmd/Ctrl + Shift + ,` - Conversation settings
+- `Alt + ↑/↓` or `J/K` - Navigate between conversations
+- `Cmd/Ctrl + /` - Show shortcuts help
+- `Esc` - Close modal / blur input
+- Help button (?) in sidebar footer opens shortcuts reference
 
 ## Data Model
 
@@ -71,6 +85,7 @@ Message {
   role: "user" | "assistant"
   content: string
   thinking?: string
+  timestamp?: number    // ms since epoch, displayed on hover
 }
 
 Settings {

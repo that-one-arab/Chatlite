@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef } from "preact/hooks";
+import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import { appDataDir } from "@tauri-apps/api/path";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import type { Chat, Settings, Message } from "@/types";
 import { useModels } from "@/hooks/useModels";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
+import { useHotkeys } from "@/hooks/useHotkeys";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { EmptyState } from "@/components/EmptyState";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ChatSettingsModal } from "@/components/ChatSettingsModal";
+import { HelpModal } from "@/components/HelpModal";
 
 function App() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -17,9 +19,11 @@ function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
+  const modelSelectRef = useRef<HTMLSelectElement>(null);
 
   const { models, selectedModel, setSelectedModel, fetchModels } = useModels();
   const currentChat = chats.find((c) => c.id === currentChatId);
@@ -409,6 +413,56 @@ The title would be used as the chat title in the sidebar.
     }
   };
 
+  // Navigation helpers for hotkeys
+  const navigateToPrevChat = useCallback(() => {
+    if (chats.length === 0) return;
+    const currentIndex = chats.findIndex((c) => c.id === currentChatId);
+    if (currentIndex > 0) {
+      selectChat(chats[currentIndex - 1].id);
+    }
+  }, [chats, currentChatId]);
+
+  const navigateToNextChat = useCallback(() => {
+    if (chats.length === 0) return;
+    const currentIndex = chats.findIndex((c) => c.id === currentChatId);
+    if (currentIndex < chats.length - 1) {
+      selectChat(chats[currentIndex + 1].id);
+    } else if (currentIndex === -1) {
+      selectChat(chats[0].id);
+    }
+  }, [chats, currentChatId]);
+
+  // Open model dropdown
+  const openModelDropdown = useCallback(() => {
+    if (modelSelectRef.current) {
+      modelSelectRef.current.focus();
+      modelSelectRef.current.click();
+    }
+  }, []);
+
+  // Keyboard shortcuts
+  const isAnyModalOpen = showSettings || showChatSettings || showHelp;
+  const closeAllModals = useCallback(() => {
+    setShowSettings(false);
+    setShowChatSettings(false);
+    setShowHelp(false);
+  }, []);
+
+  useHotkeys(
+    {
+      onFocusInput: () => inputRef.current?.focus(),
+      onNewChat: createNewChat,
+      onOpenModelDropdown: openModelDropdown,
+      onOpenSettings: () => setShowSettings(true),
+      onOpenChatSettings: () => currentChat && setShowChatSettings(true),
+      onOpenHelp: () => setShowHelp(true),
+      onCloseModals: closeAllModals,
+      onNavigatePrev: navigateToPrevChat,
+      onNavigateNext: navigateToNextChat,
+    },
+    { isModalOpen: isAnyModalOpen }
+  );
+
   return (
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar
@@ -416,11 +470,13 @@ The title would be used as the chat title in the sidebar.
         currentChatId={currentChatId}
         selectedModel={selectedModel}
         models={models}
+        modelSelectRef={modelSelectRef}
         onCreateChat={createNewChat}
         onSelectChat={selectChat}
         onDeleteChat={deleteChat}
         onModelChange={setSelectedModel}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenHelp={() => setShowHelp(true)}
       />
 
       <div class="flex-1 flex flex-col">
@@ -461,6 +517,8 @@ The title would be used as the chat title in the sidebar.
           onClose={() => setShowChatSettings(false)}
         />
       )}
+
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }
