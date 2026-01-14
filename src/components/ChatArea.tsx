@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 import type { RefObject } from "preact";
 import type { Chat } from "@/types";
 import { Message } from "./Message";
@@ -9,6 +9,7 @@ interface ChatAreaProps {
   isStreaming: boolean;
   messagesEndRef: RefObject<HTMLDivElement>;
   messagesContainerRef: RefObject<HTMLDivElement>;
+  inputRef: RefObject<HTMLInputElement>;
   onInputChange: (value: string) => void;
   onSendMessage: () => void;
   onStopGeneration: () => void;
@@ -22,6 +23,7 @@ export function ChatArea({
   isStreaming,
   messagesEndRef,
   messagesContainerRef,
+  inputRef,
   onInputChange,
   onSendMessage,
   onStopGeneration,
@@ -30,19 +32,11 @@ export function ChatArea({
 }: ChatAreaProps) {
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset edit state when chat changes
   useEffect(() => {
     setEditingMessageIndex(null);
     setEditContent("");
-  }, [chat.id]);
-
-  // Focus input when switching to a new empty chat
-  useEffect(() => {
-    if (chat.messages.length === 0) {
-      inputRef.current?.focus();
-    }
   }, [chat.id]);
 
   const handleStartEdit = (index: number, content: string) => {

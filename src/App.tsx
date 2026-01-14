@@ -21,6 +21,7 @@ function App() {
 
   const { models, selectedModel, setSelectedModel, fetchModels } = useModels();
   const currentChat = chats.find((c) => c.id === currentChatId);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { messagesEndRef, messagesContainerRef, handleWheel, setAutoScroll } =
     useAutoScroll({
       messages: currentChat?.messages,
@@ -148,6 +149,12 @@ function App() {
   }, [selectedModel, storagePath]);
 
   const createNewChat = () => {
+    // If current chat is empty, just focus the input instead of creating a new one
+    if (currentChat && currentChat.messages.length === 0) {
+      inputRef.current?.focus();
+      return;
+    }
+
     const newChat: Chat = {
       id: Date.now().toString(),
       title: "New Chat",
@@ -156,6 +163,9 @@ function App() {
     };
     setChats([newChat, ...chats]);
     setCurrentChatId(newChat.id);
+
+    // Focus input after React re-renders with new chat
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const deleteChat = (chatId: string) => {
@@ -395,6 +405,7 @@ The title would be used as the chat title in the sidebar.
             isStreaming={isStreaming}
             messagesEndRef={messagesEndRef}
             messagesContainerRef={messagesContainerRef}
+            inputRef={inputRef}
             onInputChange={setInput}
             onSendMessage={sendMessage}
             onStopGeneration={stopGeneration}
