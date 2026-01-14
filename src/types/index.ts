@@ -9,6 +9,7 @@ export interface Chat {
   title: string;
   messages: Message[];
   model: string;
+  systemPrompt?: string;
 }
 
 export interface Settings {

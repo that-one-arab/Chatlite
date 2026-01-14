@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { EmptyState } from "@/components/EmptyState";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ChatSettingsModal } from "@/components/ChatSettingsModal";
 
 function App() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -15,6 +16,7 @@ function App() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showChatSettings, setShowChatSettings] = useState(false);
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -227,13 +229,19 @@ The title would be used as the chat title in the sidebar.
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    // Build messages array with optional system prompt
+    const chat = chats.find((c) => c.id === currentChatId);
+    const messages = chat?.systemPrompt
+      ? [{ role: "system" as const, content: chat.systemPrompt }, ...conversationHistory]
+      : conversationHistory;
+
     try {
       const response = await fetch("http://localhost:11434/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: selectedModel,
-          messages: conversationHistory,
+          messages,
           stream: true,
         }),
         signal: controller.signal,
@@ -364,6 +372,15 @@ The title would be used as the chat title in the sidebar.
     }
   };
 
+  const updateSystemPrompt = (systemPrompt: string) => {
+    if (!currentChatId) return;
+    setChats((prev) =>
+      prev.map((c) =>
+        c.id === currentChatId ? { ...c, systemPrompt } : c
+      )
+    );
+  };
+
   const applyStoragePath = async () => {
     try {
       // Ensure new directory exists
@@ -419,6 +436,7 @@ The title would be used as the chat title in the sidebar.
             onStopGeneration={stopGeneration}
             onWheel={handleWheel}
             onEditMessage={editMessage}
+            onOpenSettings={() => setShowChatSettings(true)}
           />
         ) : (
           <EmptyState />
@@ -433,6 +451,15 @@ The title would be used as the chat title in the sidebar.
         onApply={applyStoragePath}
         onClose={() => setShowSettings(false)}
       />
+
+      {currentChat && (
+        <ChatSettingsModal
+          isOpen={showChatSettings}
+          systemPrompt={currentChat.systemPrompt || ""}
+          onSave={updateSystemPrompt}
+          onClose={() => setShowChatSettings(false)}
+        />
+      )}
     </div>
   );
 }
