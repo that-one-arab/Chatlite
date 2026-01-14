@@ -73,6 +73,8 @@ export function ChatArea({
               isEditing={editingMessageIndex === idx}
               editContent={editContent}
               canEdit={msg.role === "user" && !isStreaming}
+              isStreaming={isStreaming}
+              isLastMessage={idx === chat.messages.length - 1}
               onStartEdit={handleStartEdit}
               onCancelEdit={handleCancelEdit}
               onSaveEdit={handleSaveEdit}

@@ -9,6 +9,8 @@ interface MessageProps {
   isEditing: boolean;
   editContent: string;
   canEdit: boolean;
+  isStreaming: boolean;
+  isLastMessage: boolean;
   onStartEdit: (index: number, content: string) => void;
   onCancelEdit: () => void;
   onSaveEdit: (index: number, newContent: string) => void;
@@ -21,6 +23,8 @@ export function Message({
   isEditing,
   editContent,
   canEdit,
+  isStreaming,
+  isLastMessage,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
@@ -28,6 +32,9 @@ export function Message({
 }: MessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const [thinkingExpanded, setThinkingExpanded] = useState(false);
+  const isThinking = !isUser && isLastMessage && isStreaming && !message.content;
+  const hasThinking = !isUser && message.thinking;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -74,10 +81,48 @@ export function Message({
           </button>
         )}
 
+        {/* Thinking section (collapsible) */}
+        {hasThinking && !isEditing && (
+          <div className="mb-2">
+            <button
+              onClick={() => setThinkingExpanded(!thinkingExpanded)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer"
+            >
+              <svg
+                className={`w-3 h-3 transition-transform ${thinkingExpanded ? "rotate-90" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <span className="font-medium">Thinking</span>
+              {isStreaming && isLastMessage && !message.content && (
+                <span className="flex gap-0.5 ml-1">
+                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></span>
+                </span>
+              )}
+            </button>
+            {thinkingExpanded && (
+              <div className="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                {message.thinking}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Display mode */}
         {!isEditing && (
           <div className={`break-words text-sm ${isUser ? "whitespace-pre-wrap" : "prose prose-sm dark:prose-invert max-w-none"}`}>
-            {isUser ? (
+            {isThinking && !hasThinking ? (
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></span>
+              </div>
+            ) : isUser ? (
               message.content
             ) : (
               <Markdown

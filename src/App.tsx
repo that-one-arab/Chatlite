@@ -254,14 +254,22 @@ The title would be used as the chat title in the sidebar.
         for (const line of lines) {
           try {
             const json = JSON.parse(line);
-            if (json.message?.content) {
+            const content = json.message?.content;
+            const thinking = json.message?.thinking;
+
+            if (content || thinking) {
               setChats((prev) =>
                 prev.map((c) => {
                   if (c.id === currentChatId) {
                     const messages = [...c.messages];
                     const lastMsg = messages[messages.length - 1];
                     if (lastMsg.role === "assistant") {
-                      lastMsg.content += json.message.content;
+                      if (content) {
+                        lastMsg.content += content;
+                      }
+                      if (thinking) {
+                        lastMsg.thinking = (lastMsg.thinking || "") + thinking;
+                      }
                     }
                     return { ...c, messages };
                   }
