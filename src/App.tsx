@@ -6,12 +6,14 @@ import type { Chat, Settings, Message } from "@/types";
 import { useModels } from "@/hooks/useModels";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useHotkeys } from "@/hooks/useHotkeys";
+import { useToast } from "@/hooks/useToast";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { EmptyState } from "@/components/EmptyState";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ChatSettingsModal } from "@/components/ChatSettingsModal";
 import { HelpModal } from "@/components/HelpModal";
+import { Toast } from "@/components/Toast";
 
 function App() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -30,6 +32,7 @@ function App() {
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
 
   const { models, selectedModel, setSelectedModel, fetchModels } = useModels();
+  const { toasts, showError, removeToast } = useToast();
   const currentChat = chats.find((c) => c.id === currentChatId);
   const inputRef = useRef<HTMLInputElement>(null);
   const { messagesEndRef, messagesContainerRef, handleWheel, setAutoScroll } =
@@ -254,7 +257,7 @@ function App() {
             {
               role: "system",
               content: `
-Generate a concise title (max 50 characters) for a conversation based on the user's first message. 
+Generate a concise title (max 50 characters) for a conversation based on the user's first message.
 Respond with ONLY the title, no quotes or punctuation.
 The title would be used as the chat title in the sidebar.
 `,
@@ -268,14 +271,23 @@ The title would be used as the chat title in the sidebar.
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
       const data = await response.json();
       const generatedTitle = data.message?.content?.trim() || firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "");
 
       setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title: generatedTitle } : c)));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating title:", error);
       const fallbackTitle = firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "");
       setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title: fallbackTitle } : c)));
+
+      // Only show error toast if it's a connection issue
+      if (error.message === "Failed to fetch") {
+        showError("Cannot connect to Ollama for title generation");
+      }
     }
   };
 
@@ -304,10 +316,24 @@ The title would be used as the chat title in the sidebar.
         signal: controller.signal,
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = "Failed to connect to Ollama";
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          errorMessage = `Ollama error: ${response.status} ${response.statusText}`;
+        }
+
+        throw new Error(errorMessage);
+      }
+
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
-      if (!reader) throw new Error("No reader");
+      if (!reader) throw new Error("No reader available");
 
       while (true) {
         const { done, value } = await reader.read();
@@ -350,6 +376,32 @@ The title would be used as the chat title in the sidebar.
     } catch (error: any) {
       if (error.name !== "AbortError") {
         console.error("Stream error:", error);
+
+        // Show user-friendly error message
+        let errorMessage = "Failed to get response from Ollama";
+
+        if (error.message === "Failed to fetch") {
+          errorMessage = "Cannot connect to Ollama. Make sure Ollama is running on localhost:11434";
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        showError(errorMessage);
+
+        // Remove the empty assistant message on error
+        setChats((prev) =>
+          prev.map((c) => {
+            if (c.id === currentChatId) {
+              const messages = [...c.messages];
+              const lastMsg = messages[messages.length - 1];
+              if (lastMsg.role === "assistant" && !lastMsg.content) {
+                messages.pop();
+              }
+              return { ...c, messages };
+            }
+            return c;
+          })
+        );
       }
     } finally {
       setIsStreaming(false);
@@ -581,6 +633,18 @@ The title would be used as the chat title in the sidebar.
       )}
 
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+
+      {/* Toast container */}
+      <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
