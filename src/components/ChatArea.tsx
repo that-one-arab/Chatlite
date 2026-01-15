@@ -10,6 +10,8 @@ interface ChatAreaProps {
   messagesEndRef: RefObject<HTMLDivElement>;
   messagesContainerRef: RefObject<HTMLDivElement>;
   inputRef: RefObject<HTMLInputElement>;
+  zoomLevel: number;
+  showZoomIndicator: boolean;
   onInputChange: (value: string) => void;
   onSendMessage: () => void;
   onStopGeneration: () => void;
@@ -25,6 +27,8 @@ export function ChatArea({
   messagesEndRef,
   messagesContainerRef,
   inputRef,
+  zoomLevel,
+  showZoomIndicator,
   onInputChange,
   onSendMessage,
   onStopGeneration,
@@ -65,7 +69,7 @@ export function ChatArea({
   return (
     <>
       {/* Header */}
-      <div class="flex items-center justify-end px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div class="flex items-center justify-end px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
         <button
           onClick={onOpenSettings}
           class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
@@ -76,6 +80,15 @@ export function ChatArea({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
+
+        {/* Zoom Level Indicator */}
+        {showZoomIndicator && (
+          <div
+            class="absolute right-8 top-16 bg-gray-800 dark:bg-gray-700 text-white px-3 py-1.5 rounded-lg shadow-lg text-sm font-medium animate-fade-in-out"
+          >
+            {Math.round(zoomLevel * 100)}%
+          </div>
+        )}
       </div>
 
       {/* Messages */}

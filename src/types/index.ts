@@ -16,4 +16,5 @@ export interface Chat {
 export interface Settings {
   storagePath: string;
   lastModel: string;
+  zoomLevel?: number;
 }

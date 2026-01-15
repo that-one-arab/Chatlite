@@ -10,6 +10,9 @@ interface HotkeyActions {
   onCloseModals: () => void;
   onNavigatePrev: () => void;
   onNavigateNext: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
 }
 
 interface UseHotkeysOptions {
@@ -92,6 +95,27 @@ export function useHotkeys(
         return;
       }
 
+      // Cmd/Ctrl + Plus/= - Zoom in
+      if (isMod && (e.key === "+" || e.key === "=")) {
+        e.preventDefault();
+        actions.onZoomIn();
+        return;
+      }
+
+      // Cmd/Ctrl + Minus - Zoom out
+      if (isMod && e.key === "-") {
+        e.preventDefault();
+        actions.onZoomOut();
+        return;
+      }
+
+      // Cmd/Ctrl + 0 - Reset zoom
+      if (isMod && e.key === "0") {
+        e.preventDefault();
+        actions.onZoomReset();
+        return;
+      }
+
       // Navigation shortcuts - only when not typing
       if (!isTyping) {
         // Alt + Up - Previous chat
@@ -140,6 +164,9 @@ export const HOTKEYS = [
   { keys: ["Alt", "↑"], description: "Previous conversation" },
   { keys: ["Alt", "↓"], description: "Next conversation" },
   { keys: ["J / K"], description: "Navigate conversations" },
+  { keys: ["⌘", "+"], description: "Zoom in" },
+  { keys: ["⌘", "-"], description: "Zoom out" },
+  { keys: ["⌘", "0"], description: "Reset zoom" },
   { keys: ["⌘", "/"], description: "Show keyboard shortcuts" },
   { keys: ["Esc"], description: "Close modal / Blur input" },
 ] as const;

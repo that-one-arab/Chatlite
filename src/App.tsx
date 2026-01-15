@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import { appDataDir } from "@tauri-apps/api/path";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { Chat, Settings, Message } from "@/types";
 import { useModels } from "@/hooks/useModels";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
@@ -22,8 +23,11 @@ function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const modelSelectRef = useRef<HTMLSelectElement>(null);
+  const zoomIndicatorTimeoutRef = useRef<number | null>(null);
 
   const { models, selectedModel, setSelectedModel, fetchModels } = useModels();
   const currentChat = chats.find((c) => c.id === currentChatId);
@@ -60,6 +64,7 @@ function App() {
       let settings: Settings = {
         storagePath: defaultPath,
         lastModel: "",
+        zoomLevel: 1.0,
       };
 
       try {
@@ -75,6 +80,10 @@ function App() {
       setStoragePath(settings.storagePath);
       setCustomPath(settings.storagePath);
       setSelectedModel(settings.lastModel);
+      setZoomLevel(settings.zoomLevel ?? 1.0);
+
+      // Apply zoom level
+      await applyZoom(settings.zoomLevel ?? 1.0);
 
       // Ensure storage directory exists
       try {
@@ -126,19 +135,63 @@ function App() {
     }
   };
 
-  const saveSettings = async (model: string, path: string) => {
+  const saveSettings = async (model: string, path: string, zoom?: number) => {
     try {
       const appData = await appDataDir();
       const settingsPath = `${appData}/settings.json`;
       const settings: Settings = {
         storagePath: path,
         lastModel: model,
+        zoomLevel: zoom ?? zoomLevel,
       };
       await writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
     } catch (error) {
       console.error("Error saving settings:", error);
     }
   };
+
+  const applyZoom = async (level: number) => {
+    try {
+      const webview = getCurrentWebview();
+      await webview.setZoom(level);
+    } catch (error) {
+      console.error("Error setting zoom:", error);
+    }
+  };
+
+  const changeZoom = async (newLevel: number) => {
+    // Clamp zoom level between 0.5 and 2.0
+    const clampedLevel = Math.max(0.5, Math.min(2.0, newLevel));
+    setZoomLevel(clampedLevel);
+    await applyZoom(clampedLevel);
+    await saveSettings(selectedModel, storagePath, clampedLevel);
+
+    // Show zoom indicator
+    setShowZoomIndicator(true);
+
+    // Clear existing timeout
+    if (zoomIndicatorTimeoutRef.current) {
+      clearTimeout(zoomIndicatorTimeoutRef.current);
+    }
+
+    // Hide indicator after 1 second
+    zoomIndicatorTimeoutRef.current = window.setTimeout(() => {
+      setShowZoomIndicator(false);
+    }, 1000);
+  };
+
+  const zoomIn = () => changeZoom(Math.round((zoomLevel + 0.1) * 10) / 10);
+  const zoomOut = () => changeZoom(Math.round((zoomLevel - 0.1) * 10) / 10);
+  const resetZoom = () => changeZoom(1.0);
+
+  // Cleanup zoom indicator timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (zoomIndicatorTimeoutRef.current) {
+        clearTimeout(zoomIndicatorTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Auto-save chats
   useEffect(() => {
@@ -401,7 +454,7 @@ The title would be used as the chat title in the sidebar.
 
       // Update path
       setStoragePath(customPath);
-      await saveSettings(selectedModel, customPath);
+      await saveSettings(selectedModel, customPath, zoomLevel);
 
       // Load chats from new location
       await loadChats(customPath);
@@ -459,6 +512,9 @@ The title would be used as the chat title in the sidebar.
       onCloseModals: closeAllModals,
       onNavigatePrev: navigateToPrevChat,
       onNavigateNext: navigateToNextChat,
+      onZoomIn: zoomIn,
+      onZoomOut: zoomOut,
+      onZoomReset: resetZoom,
     },
     { isModalOpen: isAnyModalOpen }
   );
@@ -488,6 +544,8 @@ The title would be used as the chat title in the sidebar.
             messagesEndRef={messagesEndRef}
             messagesContainerRef={messagesContainerRef}
             inputRef={inputRef}
+            zoomLevel={zoomLevel}
+            showZoomIndicator={showZoomIndicator}
             onInputChange={setInput}
             onSendMessage={sendMessage}
             onStopGeneration={stopGeneration}
@@ -504,7 +562,11 @@ The title would be used as the chat title in the sidebar.
         isOpen={showSettings}
         storagePath={storagePath}
         customPath={customPath}
+        zoomLevel={zoomLevel}
         onCustomPathChange={setCustomPath}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onZoomReset={resetZoom}
         onApply={applyStoragePath}
         onClose={() => setShowSettings(false)}
       />
