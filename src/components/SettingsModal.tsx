@@ -26,7 +26,7 @@ export function SettingsModal({
   if (!isOpen) return null;
 
   return (
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
       <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-full mx-4">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
           Settings
