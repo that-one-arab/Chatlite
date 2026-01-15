@@ -124,13 +124,12 @@ export function ChatArea({
               value={input}
               onInput={(e) => onInputChange(e.currentTarget.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
                   e.preventDefault();
                   onSendMessage();
                 }
               }}
               placeholder="Message..."
-              disabled={isStreaming}
               class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
             {isStreaming ? (
