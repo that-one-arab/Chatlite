@@ -7,6 +7,7 @@ interface UIContextValue {
   showSettings: boolean;
   showChatSettings: boolean;
   showHelp: boolean;
+  showLlmSelector: boolean;
   zoomLevel: number;
   showZoomIndicator: boolean;
   setInput: (input: string) => void;
@@ -14,11 +15,13 @@ interface UIContextValue {
   setShowSettings: (show: boolean) => void;
   setShowChatSettings: (show: boolean) => void;
   setShowHelp: (show: boolean) => void;
+  setShowLlmSelector: (show: boolean) => void;
   setZoomLevel: (level: number) => void;
   setShowZoomIndicator: (show: boolean) => void;
   toggleSettings: () => void;
   toggleChatSettings: () => void;
   toggleHelp: () => void;
+  toggleLlmSelector: () => void;
   closeAllModals: () => void;
 }
 
@@ -30,6 +33,7 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
   const [showSettings, setShowSettings] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showLlmSelector, setShowLlmSelector] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
 
@@ -45,10 +49,15 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     setShowHelp((prev) => !prev);
   }, []);
 
+  const toggleLlmSelector = useCallback(() => {
+    setShowLlmSelector((prev) => !prev);
+  }, []);
+
   const closeAllModals = useCallback(() => {
     setShowSettings(false);
     setShowChatSettings(false);
     setShowHelp(false);
+    setShowLlmSelector(false);
   }, []);
 
   const value: UIContextValue = {
@@ -57,6 +66,7 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     showSettings,
     showChatSettings,
     showHelp,
+    showLlmSelector,
     zoomLevel,
     showZoomIndicator,
     setInput,
@@ -64,11 +74,13 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     setShowSettings,
     setShowChatSettings,
     setShowHelp,
+    setShowLlmSelector,
     setZoomLevel,
     setShowZoomIndicator,
     toggleSettings,
     toggleChatSettings,
     toggleHelp,
+    toggleLlmSelector,
     closeAllModals,
   };
 

@@ -8,7 +8,7 @@ interface ChatAreaProps {
   messagesEndRef: RefObject<HTMLDivElement>;
   messagesContainerRef: RefObject<HTMLDivElement>;
   inputRef: RefObject<HTMLInputElement>;
-  modelSelectRef?: RefObject<HTMLSelectElement>;
+  llmSelectRef?: RefObject<HTMLButtonElement>;
   onWheel: (e: WheelEvent) => void;
   onUpdateChatTitle: (chatId: string, firstMessage: string, model: string) => void;
   abortControllerRef: RefObject<AbortController | null>;
@@ -19,14 +19,14 @@ export function ChatArea({
   messagesEndRef,
   messagesContainerRef,
   inputRef,
-  modelSelectRef,
+  llmSelectRef,
   onWheel,
   onUpdateChatTitle,
   abortControllerRef,
   setAutoScroll,
 }: ChatAreaProps) {
   const { currentChat, updateChatMessages } = useChatContext();
-  const { models, selectedModel, setSelectedModel } = useModelContext();
+  const { selectedModel } = useModelContext();
   const {
     input,
     isStreaming,
@@ -36,6 +36,7 @@ export function ChatArea({
     setIsStreaming,
     setShowChatSettings,
     setShowHelp,
+    setShowLlmSelector,
   } = useUIContext();
   const { showError } = useNotificationContext();
 
@@ -226,20 +227,15 @@ export function ChatArea({
     <>
       {/* Header */}
       <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
-        {/* Model Selector - Centered */}
+        {/* LLM Selector Button - Centered */}
         <div class="flex-1 flex justify-center">
-          <select
-            ref={modelSelectRef}
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.currentTarget.value)}
-            class="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <button
+            ref={llmSelectRef}
+            onClick={() => setShowLlmSelector(true)}
+            class="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           >
-            {models.map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
+            {selectedModel}
+          </button>
         </div>
 
         {/* Action Buttons - Right Aligned */}

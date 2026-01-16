@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ChatSettingsModal } from "@/components/ChatSettingsModal";
 import { HelpModal } from "@/components/HelpModal";
+import { LlmSelectorModal } from "@/components/LlmSelectorModal";
 import { Toast } from "@/components/Toast";
 
 function AppContent() {
@@ -28,10 +29,12 @@ function AppContent() {
     showSettings,
     showChatSettings,
     showHelp,
+    showLlmSelector,
     zoomLevel,
     setShowSettings,
     setShowChatSettings,
     setShowHelp,
+    setShowLlmSelector,
     setZoomLevel,
     setShowZoomIndicator,
     closeAllModals,
@@ -41,7 +44,7 @@ function AppContent() {
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
-  const modelSelectRef = useRef<HTMLSelectElement>(null);
+  const llmSelectRef = useRef<HTMLButtonElement>(null);
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -300,20 +303,17 @@ The title would be used as the chat title in the sidebar.
     }
   }, [chats, currentChat, selectChat, setSelectedModel]);
 
-  const openModelDropdown = useCallback(() => {
-    if (modelSelectRef.current) {
-      modelSelectRef.current.focus();
-      modelSelectRef.current.click();
-    }
-  }, []);
+  const openLlmSelector = useCallback(() => {
+    setShowLlmSelector(true);
+  }, [setShowLlmSelector]);
 
-  const isAnyModalOpen = showSettings || showChatSettings || showHelp;
+  const isAnyModalOpen = showSettings || showChatSettings || showHelp || showLlmSelector;
 
   useHotkeys(
     {
       onFocusInput: () => inputRef.current?.focus(),
       onNewChat: () => {}, // Will be handled in Sidebar
-      onOpenModelDropdown: openModelDropdown,
+      onOpenModelDropdown: openLlmSelector,
       onOpenSettings: () => setShowSettings(true),
       onOpenChatSettings: () => currentChat && setShowChatSettings(true),
       onOpenHelp: () => setShowHelp(true),
@@ -337,7 +337,7 @@ The title would be used as the chat title in the sidebar.
             messagesEndRef={messagesEndRef}
             messagesContainerRef={messagesContainerRef}
             inputRef={inputRef}
-            modelSelectRef={modelSelectRef}
+            llmSelectRef={llmSelectRef}
             onWheel={handleWheel}
             onUpdateChatTitle={handleUpdateChatTitle}
             abortControllerRef={abortControllerRef}
@@ -364,6 +364,12 @@ The title would be used as the chat title in the sidebar.
       <ChatSettingsModal />
 
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+
+      <LlmSelectorModal
+        isOpen={showLlmSelector}
+        onClose={() => setShowLlmSelector(false)}
+        onSelect={() => inputRef.current?.focus()}
+      />
 
       <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map((toast) => (
