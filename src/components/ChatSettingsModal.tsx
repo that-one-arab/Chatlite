@@ -1,29 +1,25 @@
 import { useState, useEffect } from "preact/hooks";
+import { useChatContext, useUIContext } from "@/contexts";
 
-interface ChatSettingsModalProps {
-  isOpen: boolean;
-  systemPrompt: string;
-  onSave: (systemPrompt: string) => void;
-  onClose: () => void;
-}
+export function ChatSettingsModal() {
+  const { currentChat, updateSystemPrompt } = useChatContext();
+  const { showChatSettings, setShowChatSettings } = useUIContext();
 
-export function ChatSettingsModal({
-  isOpen,
-  systemPrompt,
-  onSave,
-  onClose,
-}: ChatSettingsModalProps) {
-  const [draft, setDraft] = useState(systemPrompt);
+  const [draft, setDraft] = useState(currentChat?.systemPrompt || "");
 
   useEffect(() => {
-    setDraft(systemPrompt);
-  }, [systemPrompt, isOpen]);
+    setDraft(currentChat?.systemPrompt || "");
+  }, [currentChat?.systemPrompt, showChatSettings]);
+
+  const isOpen = showChatSettings && currentChat != null;
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onSave(draft);
-    onClose();
+    if (currentChat) {
+      updateSystemPrompt(currentChat.id, draft);
+    }
+    setShowChatSettings(false);
   };
 
   return (
@@ -51,7 +47,7 @@ export function ChatSettingsModal({
 
         <div class="flex gap-2">
           <button
-            onClick={onClose}
+            onClick={() => setShowChatSettings(false)}
             class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm"
           >
             Cancel

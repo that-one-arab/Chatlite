@@ -6,25 +6,55 @@ Desktop chat interface for Ollama models. Built with Tauri + Preact + Tailwind.
 
 **Stack**: Tauri (Rust), Preact, Tailwind CSS, Ollama API
 
-**Structure**: Modular component-based architecture with path aliases (`@/`)
+**State Management**: Context API (no prop drilling)
 
 ```
 src/
 ├── types/index.ts           # TypeScript interfaces
+├── contexts/                # Global state (Context API)
+│   ├── ChatContext.tsx      # Chats, messages, CRUD operations
+│   ├── ModelContext.tsx     # Model list & selection
+│   ├── UIContext.tsx        # Input, modals, zoom, streaming state
+│   ├── NotificationContext.tsx # Toast notifications
+│   └── index.tsx            # AppProviders wrapper
 ├── hooks/
-│   ├── useModels.ts         # Model fetching & selection
 │   ├── useAutoScroll.ts     # Auto-scroll during streaming
-│   └── useHotkeys.ts        # Global keyboard shortcuts
+│   ├── useHotkeys.ts        # Global keyboard shortcuts
+│   └── useToast.ts          # Toast notifications (legacy)
 ├── components/
-│   ├── Sidebar.tsx          # Chat list + model selector
-│   ├── ChatArea.tsx         # Messages + input area
-│   ├── Message.tsx          # Message display + edit + thinking
+│   ├── Sidebar.tsx          # Chat list (uses contexts)
+│   ├── ChatArea.tsx         # Messages + input (uses contexts)
+│   ├── Message.tsx          # Message display + edit
 │   ├── EmptyState.tsx       # No chat selected view
 │   ├── SettingsModal.tsx    # App settings dialog
-│   ├── ChatSettingsModal.tsx # Per-conversation settings
+│   ├── ChatSettingsModal.tsx # Per-conversation settings (uses contexts)
 │   └── HelpModal.tsx        # Keyboard shortcuts reference
-└── App.tsx                  # Main orchestrator
+└── App.tsx                  # Provider setup + persistence
 ```
+
+## State Management
+
+**Context System** (eliminates prop drilling):
+- **ChatContext**: `chats`, `currentChat`, `createChat()`, `deleteChat()`, `selectChat()`, `updateChatMessages()`, `updateChatTitle()`, `updateSystemPrompt()`
+- **ModelContext**: `models`, `selectedModel`, `setSelectedModel()`, `fetchModels()`
+- **UIContext**: `input`, `isStreaming`, `showSettings`, `showChatSettings`, `showHelp`, `zoomLevel`, `showZoomIndicator`, + setters/toggles
+- **NotificationContext**: `toasts`, `showError()`, `showSuccess()`, `removeToast()`
+
+**Data Flow**:
+1. Components consume contexts via hooks (e.g., `useChatContext()`)
+2. Context actions update state
+3. App.tsx observes context state changes and persists to disk (Tauri APIs)
+
+## UI Layout
+
+**Sidebar** (left): Chat list + New Chat button + Settings button (app-level)
+
+**Chat Header** (center/right):
+- Model selector dropdown (center-aligned)
+- Help (?) button (right)
+- Conversation settings button (right)
+
+**Chat Area** (main): Messages + input field + Send/Stop button
 
 ## Features
 
@@ -36,6 +66,7 @@ src/
 - Stored in `chats.json` at configurable path
 
 ### Model Selection
+- Model selector dropdown located in chat header (center-aligned)
 - Fetches available models from Ollama (`http://localhost:11434/api/tags`)
 - Each chat remembers its model
 - Switching chats auto-selects that chat's model
@@ -62,13 +93,13 @@ src/
 ### Keyboard Shortcuts
 - `Cmd/Ctrl + K` - Focus message input
 - `Cmd/Ctrl + N` - New conversation
-- `Cmd/Ctrl + M` - Open model selector
+- `Cmd/Ctrl + M` - Open model selector (in chat header)
 - `Cmd/Ctrl + ,` - Open settings
 - `Cmd/Ctrl + Shift + ,` - Conversation settings
 - `Alt + ↑/↓` or `J/K` - Navigate between conversations
 - `Cmd/Ctrl + /` - Show shortcuts help
 - `Esc` - Close modal / blur input
-- Help button (?) in sidebar footer opens shortcuts reference
+- Help button (?) in chat header opens shortcuts reference
 
 ## Data Model
 
