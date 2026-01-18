@@ -3,6 +3,7 @@ export interface Message {
   content: string;
   thinking?: string;
   timestamp?: number;
+  images?: string[];  // Array of data URLs for displaying images
 }
 
 export interface Chat {
@@ -17,4 +18,11 @@ export interface Settings {
   storagePath: string;
   lastModel: string;
   zoomLevel?: number;
+}
+
+export interface AttachedImage {
+  id: string;           // Unique identifier
+  base64: string;       // Base64 data (without data URI prefix)
+  dataUrl: string;      // Full data URL for validation
+  name: string;         // "Image 1", "Image 2", etc.
 }

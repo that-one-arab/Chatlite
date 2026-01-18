@@ -15,6 +15,7 @@ interface MessageProps {
   onCancelEdit: () => void;
   onSaveEdit: (index: number, newContent: string) => void;
   onEditContentChange: (content: string) => void;
+  onImageClick?: (imageUrl: string) => void;
 }
 
 function formatTimestamp(timestamp?: number): string | null {
@@ -46,6 +47,7 @@ export function Message({
   onCancelEdit,
   onSaveEdit,
   onEditContentChange,
+  onImageClick,
 }: MessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -140,6 +142,21 @@ export function Message({
                 {message.thinking}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Images (for user messages) */}
+        {isUser && message.images && message.images.length > 0 && !isEditing && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {message.images.map((dataUrl, idx) => (
+              <img
+                key={idx}
+                src={dataUrl}
+                alt={`Image ${idx + 1}`}
+                onClick={() => onImageClick?.(dataUrl)}
+                className="max-w-[200px] max-h-[200px] object-contain rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+              />
+            ))}
           </div>
         )}
 

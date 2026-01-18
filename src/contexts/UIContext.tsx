@@ -1,5 +1,6 @@
 import { createContext } from "preact";
 import { useContext, useState, useCallback } from "preact/hooks";
+import type { AttachedImage } from "../types";
 
 interface UIContextValue {
   input: string;
@@ -10,6 +11,8 @@ interface UIContextValue {
   showLlmSelector: boolean;
   zoomLevel: number;
   showZoomIndicator: boolean;
+  attachedImages: AttachedImage[];
+  previewImage: string | null;
   setInput: (input: string) => void;
   setIsStreaming: (streaming: boolean) => void;
   setShowSettings: (show: boolean) => void;
@@ -23,6 +26,10 @@ interface UIContextValue {
   toggleHelp: () => void;
   toggleLlmSelector: () => void;
   closeAllModals: () => void;
+  attachImage: (image: AttachedImage) => void;
+  removeImage: (imageId: string) => void;
+  clearImages: () => void;
+  setPreviewImage: (imageUrl: string | null) => void;
 }
 
 const UIContext = createContext<UIContextValue | null>(null);
@@ -36,6 +43,8 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
   const [showLlmSelector, setShowLlmSelector] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const toggleSettings = useCallback(() => {
     setShowSettings((prev) => !prev);
@@ -58,6 +67,19 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     setShowChatSettings(false);
     setShowHelp(false);
     setShowLlmSelector(false);
+    setPreviewImage(null);
+  }, []);
+
+  const attachImage = useCallback((image: AttachedImage) => {
+    setAttachedImages((prev) => [...prev, image]);
+  }, []);
+
+  const removeImage = useCallback((imageId: string) => {
+    setAttachedImages((prev) => prev.filter((img) => img.id !== imageId));
+  }, []);
+
+  const clearImages = useCallback(() => {
+    setAttachedImages([]);
   }, []);
 
   const value: UIContextValue = {
@@ -69,6 +91,8 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     showLlmSelector,
     zoomLevel,
     showZoomIndicator,
+    attachedImages,
+    previewImage,
     setInput,
     setIsStreaming,
     setShowSettings,
@@ -82,6 +106,10 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     toggleHelp,
     toggleLlmSelector,
     closeAllModals,
+    attachImage,
+    removeImage,
+    clearImages,
+    setPreviewImage,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;

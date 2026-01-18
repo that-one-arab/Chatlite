@@ -2,7 +2,12 @@ import { useState, useEffect } from "preact/hooks";
 import type { RefObject } from "preact";
 import type { Message as MessageType } from "@/types";
 import { useChatContext, useModelContext, useUIContext, useNotificationContext } from "@/contexts";
+import { useImageAttachment } from "@/hooks/useImageAttachment";
+import { useMessageStreaming } from "@/hooks/useMessageStreaming";
+import { createUserMessage, createAssistantMessage, canSendMessage, getMessageText } from "@/utils/messageHelpers";
 import { Message } from "./Message";
+import { ImageBadge } from "./ImageBadge";
+import { ImagePreviewModal } from "./ImagePreviewModal";
 
 interface ChatAreaProps {
   messagesEndRef: RefObject<HTMLDivElement>;
@@ -32,16 +37,38 @@ export function ChatArea({
     isStreaming,
     zoomLevel,
     showZoomIndicator,
+    attachedImages,
+    previewImage,
     setInput,
     setIsStreaming,
     setShowChatSettings,
     setShowHelp,
     setShowLlmSelector,
+    attachImage,
+    removeImage,
+    clearImages,
+    setPreviewImage,
   } = useUIContext();
   const { showError } = useNotificationContext();
 
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
+
+  // Custom hooks
+  const { handlePaste } = useImageAttachment({
+    attachedImages,
+    attachImage,
+    showError,
+  });
+
+  const { streamResponse, stopGeneration } = useMessageStreaming({
+    selectedModel,
+    abortControllerRef,
+    setIsStreaming,
+    setAutoScroll,
+    updateChatMessages,
+    showError,
+  });
 
   // Reset edit state when chat changes
   useEffect(() => {
@@ -52,6 +79,7 @@ export function ChatArea({
   const handleStartEdit = (index: number, content: string) => {
     setEditingMessageIndex(index);
     setEditContent(content);
+    clearImages();
   };
 
   const handleCancelEdit = () => {
@@ -59,166 +87,60 @@ export function ChatArea({
     setEditContent("");
   };
 
-  const streamResponse = async (conversationHistory: MessageType[]) => {
-    if (!currentChat) return;
-
-    setIsStreaming(true);
-    setAutoScroll(true);
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    const messages = currentChat.systemPrompt
-      ? [{ role: "system" as const, content: currentChat.systemPrompt }, ...conversationHistory]
-      : conversationHistory;
-
-    try {
-      const response = await fetch("http://localhost:11434/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages,
-          stream: true,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "Failed to connect to Ollama";
-
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorMessage;
-        } catch {
-          errorMessage = `Ollama error: ${response.status} ${response.statusText}`;
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) throw new Error("No reader available");
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter((line) => line.trim());
-
-        for (const line of lines) {
-          try {
-            const json = JSON.parse(line);
-            const content = json.message?.content;
-            const thinking = json.message?.thinking;
-
-            if (content || thinking) {
-              const messages = [...currentChat.messages];
-              const lastMsg = messages[messages.length - 1];
-              if (lastMsg.role === "assistant") {
-                if (content) {
-                  lastMsg.content += content;
-                }
-                if (thinking) {
-                  lastMsg.thinking = (lastMsg.thinking || "") + thinking;
-                }
-              }
-              updateChatMessages(currentChat.id, messages);
-            }
-          } catch (e) {
-            // Ignore parse errors
-          }
-        }
-      }
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
-        console.error("Stream error:", error);
-
-        let errorMessage = "Failed to get response from Ollama";
-
-        if (error.message === "Failed to fetch") {
-          errorMessage = "Cannot connect to Ollama. Make sure Ollama is running on localhost:11434";
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-
-        showError(errorMessage);
-
-        // Remove the empty assistant message on error
-        const messages = [...currentChat.messages];
-        const lastMsg = messages[messages.length - 1];
-        if (lastMsg.role === "assistant" && !lastMsg.content) {
-          messages.pop();
-        }
-        updateChatMessages(currentChat.id, messages);
-      }
-    } finally {
-      setIsStreaming(false);
-      abortControllerRef.current = null;
-    }
-  };
-
   const sendMessage = async () => {
-    if (!input.trim() || !currentChat || !selectedModel || isStreaming) return;
+    if (!currentChat || !canSendMessage(input, attachedImages, isStreaming)) return;
 
-    const userMessage = { role: "user" as const, content: input, timestamp: Date.now() };
-    const assistantMessage = { role: "assistant" as const, content: "", timestamp: Date.now() };
+    // Prepare message
+    const messageText = getMessageText(input, attachedImages.length > 0);
+    const imagesToSend = [...attachedImages];
+    const currentMessages = currentChat.messages;
 
-    const newMessages = [...currentChat.messages, userMessage, assistantMessage];
+    const userMessage = createUserMessage(messageText, imagesToSend);
+    const assistantMessage = createAssistantMessage();
 
-    // Update chat title from first message
-    if (currentChat.messages.length === 0) {
-      onUpdateChatTitle(currentChat.id, input, selectedModel);
+    // Update chat state
+    updateChatMessages(currentChat.id, [...currentMessages, userMessage, assistantMessage]);
+
+    // Update title for first message
+    if (currentMessages.length === 0) {
+      onUpdateChatTitle(currentChat.id, messageText, selectedModel);
     }
 
-    // Update messages and model
-    updateChatMessages(currentChat.id, newMessages);
-
+    // Clear input
     setInput("");
+    clearImages();
 
-    await streamResponse([...currentChat.messages, userMessage]);
+    // Stream response
+    await streamResponse(
+      currentChat.id,
+      currentChat.systemPrompt,
+      [...currentMessages, userMessage],
+      imagesToSend
+    );
   };
 
   const handleSaveEdit = (index: number, newContent: string) => {
     if (!currentChat || !newContent.trim() || isStreaming) return;
 
-    // Truncate messages at edit point
+    // Truncate messages at edit point and update edited message
     const truncatedMessages = currentChat.messages.slice(0, index + 1);
-    truncatedMessages[index] = {
-      role: "user",
-      content: newContent,
-      timestamp: Date.now(),
-    };
-
-    // Add empty assistant message for streaming
-    const messagesWithAssistant = [
-      ...truncatedMessages,
-      { role: "assistant" as const, content: "", timestamp: Date.now() },
-    ];
+    truncatedMessages[index] = createUserMessage(newContent);
+    const assistantMessage = createAssistantMessage();
 
     // Update chat state
-    updateChatMessages(currentChat.id, messagesWithAssistant);
+    updateChatMessages(currentChat.id, [...truncatedMessages, assistantMessage]);
 
     // Regenerate title if editing first message
     if (index === 0) {
       onUpdateChatTitle(currentChat.id, newContent, selectedModel);
     }
 
+    // Clear edit state
     setEditingMessageIndex(null);
     setEditContent("");
 
     // Stream new response
-    streamResponse(truncatedMessages);
-  };
-
-  const stopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    streamResponse(currentChat.id, currentChat.systemPrompt, truncatedMessages);
   };
 
   if (!currentChat) return null;
@@ -294,6 +216,7 @@ export function ChatArea({
               onCancelEdit={handleCancelEdit}
               onSaveEdit={handleSaveEdit}
               onEditContentChange={setEditContent}
+              onImageClick={setPreviewImage}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -303,12 +226,22 @@ export function ChatArea({
       {/* Input Area */}
       <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
         <div class="max-w-3xl mx-auto">
+          {/* Image Badges */}
+          {attachedImages.length > 0 && (
+            <div class="flex flex-wrap gap-2 mb-3">
+              {attachedImages.map((img) => (
+                <ImageBadge key={img.id} dataUrl={img.dataUrl} name={img.name} onRemove={() => removeImage(img.id)} onPreview={() => setPreviewImage(img.dataUrl)} />
+              ))}
+            </div>
+          )}
+
           <div class="flex gap-2">
             <input
               ref={inputRef}
               type="text"
               value={input}
               onInput={(e) => setInput(e.currentTarget.value)}
+              onPaste={handlePaste}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
                   e.preventDefault();
@@ -328,7 +261,7 @@ export function ChatArea({
             ) : (
               <button
                 onClick={sendMessage}
-                disabled={!input.trim()}
+                disabled={!input.trim() && attachedImages.length === 0}
                 class="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
               >
                 Send
@@ -337,6 +270,9 @@ export function ChatArea({
           </div>
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
     </>
   );
 }
