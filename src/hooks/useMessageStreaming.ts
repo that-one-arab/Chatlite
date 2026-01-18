@@ -1,6 +1,6 @@
 import { useCallback } from "preact/hooks";
 import type { RefObject } from "preact";
-import type { Message, AttachedImage, Chat } from "@/types";
+import type { Message, AttachedImage } from "@/types";
 
 // Extract base64 data from a data URL
 function extractBase64FromDataUrl(dataUrl: string): string {

@@ -1,7 +1,6 @@
 import { useCallback } from "preact/hooks";
 import type { AttachedImage } from "@/types";
 
-const MAX_IMAGES_PER_MESSAGE = 5;
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
@@ -66,11 +65,6 @@ export function useImageAttachment({
         if (item.type.startsWith("image/")) {
           e.preventDefault();
 
-          // Check max images limit
-          if (attachedImages.length >= MAX_IMAGES_PER_MESSAGE) {
-            showError(`Maximum ${MAX_IMAGES_PER_MESSAGE} images per message`);
-            return;
-          }
 
           const blob = item.getAsFile();
           if (!blob) continue;
@@ -85,6 +79,5 @@ export function useImageAttachment({
 
   return {
     handlePaste,
-    maxImages: MAX_IMAGES_PER_MESSAGE,
   };
 }

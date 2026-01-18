@@ -1,6 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
 import type { RefObject } from "preact";
-import type { Message as MessageType } from "@/types";
 import { useChatContext, useModelContext, useUIContext, useNotificationContext } from "@/contexts";
 import { useImageAttachment } from "@/hooks/useImageAttachment";
 import { useMessageStreaming } from "@/hooks/useMessageStreaming";

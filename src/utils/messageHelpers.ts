@@ -34,7 +34,7 @@ export function canSendMessage(
   attachedImages: AttachedImage[],
   isStreaming: boolean
 ): boolean {
-  const hasContent = input.trim() || attachedImages.length > 0;
+  const hasContent = Boolean(input.trim() || attachedImages.length > 0);
   return hasContent && !isStreaming;
 }
 
