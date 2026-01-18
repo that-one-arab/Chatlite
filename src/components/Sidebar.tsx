@@ -1,9 +1,9 @@
-import { useChatContext, useModelContext, useUIContext } from "@/contexts";
+import { useChatContext, useModelContext, useModalContext, MODAL_NAMES } from "@/contexts";
 
 export function Sidebar() {
   const { chats, currentChatId, createChat, selectChat, deleteChat } = useChatContext();
   const { selectedModel, setSelectedModel } = useModelContext();
-  const { setShowSettings } = useUIContext();
+  const { showModal } = useModalContext();
 
   const handleCreateChat = () => {
     const chat = chats.find((c) => c.id === currentChatId);
@@ -63,7 +63,7 @@ export function Sidebar() {
       {/* Settings */}
       <div class="border-t border-gray-200 dark:border-gray-700 p-3">
         <button
-          onClick={() => setShowSettings(true)}
+          onClick={() => showModal(MODAL_NAMES.SETTINGS)}
           class="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
         >
           ⚙️ Settings

@@ -11,14 +11,16 @@ import {
   useModelContext,
   useUIContext,
   useNotificationContext,
+  useModalContext,
+  MODAL_NAMES,
 } from "@/contexts";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { EmptyState } from "@/components/EmptyState";
-import { SettingsModal } from "@/components/SettingsModal";
-import { ChatSettingsModal } from "@/components/ChatSettingsModal";
-import { HelpModal } from "@/components/HelpModal";
-import { LlmSelectorModal } from "@/components/LlmSelectorModal";
+import { SettingsModal } from "@/components/modals/SettingsModal";
+import { ChatSettingsModal } from "@/components/modals/ChatSettingsModal";
+import { HelpModal } from "@/components/modals/HelpModal";
+import { LlmSelectorModal } from "@/components/modals/LlmSelectorModal";
 import { Toast } from "@/components/Toast";
 
 function AppContent() {
@@ -26,20 +28,12 @@ function AppContent() {
   const { selectedModel, setSelectedModel, fetchModels } = useModelContext();
   const {
     isStreaming,
-    showSettings,
-    showChatSettings,
-    showHelp,
-    showLlmSelector,
     zoomLevel,
-    setShowSettings,
-    setShowChatSettings,
-    setShowHelp,
-    setShowLlmSelector,
     setZoomLevel,
     setShowZoomIndicator,
-    closeAllModals,
   } = useUIContext();
   const { toasts, showError, removeToast } = useNotificationContext();
+  const { showModal, hideModal, hideAllModals, isModalOpen, isAnyModalOpen } = useModalContext();
 
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
@@ -268,7 +262,7 @@ The title would be used as the chat title in the sidebar.
       await saveSettings(selectedModel, customPath, zoomLevel);
       await loadChats(customPath);
 
-      setShowSettings(false);
+      hideModal(MODAL_NAMES.SETTINGS);
     } catch (error) {
       console.error("Error changing storage path:", error);
       alert("Failed to change storage path. Check console for details.");
@@ -304,27 +298,25 @@ The title would be used as the chat title in the sidebar.
   }, [chats, currentChat, selectChat, setSelectedModel]);
 
   const openLlmSelector = useCallback(() => {
-    setShowLlmSelector(true);
-  }, [setShowLlmSelector]);
-
-  const isAnyModalOpen = showSettings || showChatSettings || showHelp || showLlmSelector;
+    showModal(MODAL_NAMES.LLM_SELECTOR);
+  }, [showModal]);
 
   useHotkeys(
     {
       onFocusInput: () => inputRef.current?.focus(),
       onNewChat: () => {}, // Will be handled in Sidebar
       onOpenModelDropdown: openLlmSelector,
-      onOpenSettings: () => setShowSettings(true),
-      onOpenChatSettings: () => currentChat && setShowChatSettings(true),
-      onOpenHelp: () => setShowHelp(true),
-      onCloseModals: closeAllModals,
+      onOpenSettings: () => showModal(MODAL_NAMES.SETTINGS),
+      onOpenChatSettings: () => currentChat && showModal(MODAL_NAMES.CHAT_SETTINGS),
+      onOpenHelp: () => showModal(MODAL_NAMES.HELP),
+      onCloseModals: hideAllModals,
       onNavigatePrev: navigateToPrevChat,
       onNavigateNext: navigateToNextChat,
       onZoomIn: zoomIn,
       onZoomOut: zoomOut,
       onZoomReset: resetZoom,
     },
-    { isModalOpen: isAnyModalOpen }
+    { isModalOpen: isAnyModalOpen() }
   );
 
   return (
@@ -349,7 +341,7 @@ The title would be used as the chat title in the sidebar.
       </div>
 
       <SettingsModal
-        isOpen={showSettings}
+        isOpen={isModalOpen(MODAL_NAMES.SETTINGS)}
         storagePath={storagePath}
         customPath={customPath}
         zoomLevel={zoomLevel}
@@ -358,16 +350,19 @@ The title would be used as the chat title in the sidebar.
         onZoomOut={zoomOut}
         onZoomReset={resetZoom}
         onApply={applyStoragePath}
-        onClose={() => setShowSettings(false)}
+        onClose={() => hideModal(MODAL_NAMES.SETTINGS)}
       />
 
       <ChatSettingsModal />
 
-      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+      <HelpModal
+        isOpen={isModalOpen(MODAL_NAMES.HELP)}
+        onClose={() => hideModal(MODAL_NAMES.HELP)}
+      />
 
       <LlmSelectorModal
-        isOpen={showLlmSelector}
-        onClose={() => setShowLlmSelector(false)}
+        isOpen={isModalOpen(MODAL_NAMES.LLM_SELECTOR)}
+        onClose={() => hideModal(MODAL_NAMES.LLM_SELECTOR)}
         onSelect={() => inputRef.current?.focus()}
       />
 

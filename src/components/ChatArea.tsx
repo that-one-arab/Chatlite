@@ -1,12 +1,12 @@
 import { useState, useEffect } from "preact/hooks";
 import type { RefObject } from "preact";
-import { useChatContext, useModelContext, useUIContext, useNotificationContext } from "@/contexts";
+import { useChatContext, useModelContext, useUIContext, useNotificationContext, useModalContext, MODAL_NAMES } from "@/contexts";
 import { useImageAttachment } from "@/hooks/useImageAttachment";
 import { useMessageStreaming } from "@/hooks/useMessageStreaming";
 import { createUserMessage, createAssistantMessage, canSendMessage, getMessageText } from "@/utils/messageHelpers";
 import { Message } from "./Message";
 import { ImageBadge } from "./ImageBadge";
-import { ImagePreviewModal } from "./ImagePreviewModal";
+import { ImagePreviewModal } from "./modals/ImagePreviewModal";
 
 interface ChatAreaProps {
   messagesEndRef: RefObject<HTMLDivElement>;
@@ -37,21 +37,28 @@ export function ChatArea({
     zoomLevel,
     showZoomIndicator,
     attachedImages,
-    previewImage,
     setInput,
     setIsStreaming,
-    setShowChatSettings,
-    setShowHelp,
-    setShowLlmSelector,
     attachImage,
     removeImage,
     clearImages,
-    setPreviewImage,
   } = useUIContext();
+  const { showModal, hideModal } = useModalContext();
   const { showError } = useNotificationContext();
 
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  const handleImagePreview = (imageUrl: string) => {
+    setPreviewImageUrl(imageUrl);
+    showModal(MODAL_NAMES.IMAGE_PREVIEW);
+  };
+
+  const handleCloseImagePreview = () => {
+    hideModal(MODAL_NAMES.IMAGE_PREVIEW);
+    setPreviewImageUrl(null);
+  };
 
   // Custom hooks
   const { handlePaste } = useImageAttachment({
@@ -152,7 +159,7 @@ export function ChatArea({
         <div class="flex-1 flex justify-center">
           <button
             ref={llmSelectRef}
-            onClick={() => setShowLlmSelector(true)}
+            onClick={() => showModal(MODAL_NAMES.LLM_SELECTOR)}
             class="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           >
             {selectedModel}
@@ -162,14 +169,14 @@ export function ChatArea({
         {/* Action Buttons - Right Aligned */}
         <div class="flex items-center gap-1">
           <button
-            onClick={() => setShowHelp(true)}
+            onClick={() => showModal(MODAL_NAMES.HELP)}
             class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
             title="Keyboard shortcuts"
           >
             <span class="text-base font-medium">?</span>
           </button>
           <button
-            onClick={() => setShowChatSettings(true)}
+            onClick={() => showModal(MODAL_NAMES.CHAT_SETTINGS)}
             class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
             aria-label="Conversation settings"
           >
@@ -215,7 +222,7 @@ export function ChatArea({
               onCancelEdit={handleCancelEdit}
               onSaveEdit={handleSaveEdit}
               onEditContentChange={setEditContent}
-              onImageClick={setPreviewImage}
+              onImageClick={handleImagePreview}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -229,7 +236,7 @@ export function ChatArea({
           {attachedImages.length > 0 && (
             <div class="flex flex-wrap gap-2 mb-3">
               {attachedImages.map((img) => (
-                <ImageBadge key={img.id} dataUrl={img.dataUrl} name={img.name} onRemove={() => removeImage(img.id)} onPreview={() => setPreviewImage(img.dataUrl)} />
+                <ImageBadge key={img.id} dataUrl={img.dataUrl} name={img.name} onRemove={() => removeImage(img.id)} onPreview={() => handleImagePreview(img.dataUrl)} />
               ))}
             </div>
           )}
@@ -271,7 +278,7 @@ export function ChatArea({
       </div>
 
       {/* Image Preview Modal */}
-      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
+      <ImagePreviewModal imageUrl={previewImageUrl} onClose={handleCloseImagePreview} />
     </>
   );
 }
