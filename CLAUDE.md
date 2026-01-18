@@ -14,17 +14,23 @@ src/
 ├── contexts/                # Global state (Context API)
 │   ├── ChatContext.tsx      # Chats, messages, CRUD operations
 │   ├── ModelContext.tsx     # Model list & selection
-│   ├── UIContext.tsx        # Input, modals, zoom, streaming state
+│   ├── UIContext.tsx        # Input, modals, zoom, streaming state, image attachments
 │   ├── NotificationContext.tsx # Toast notifications
 │   └── index.tsx            # AppProviders wrapper
 ├── hooks/
 │   ├── useAutoScroll.ts     # Auto-scroll during streaming
 │   ├── useHotkeys.ts        # Global keyboard shortcuts
+│   ├── useImageAttachment.ts # Image paste handling and validation
+│   ├── useMessageStreaming.ts # Ollama streaming API logic
 │   └── useToast.ts          # Toast notifications (legacy)
+├── utils/
+│   └── messageHelpers.ts    # Message creation and validation utilities
 ├── components/
 │   ├── Sidebar.tsx          # Chat list (uses contexts)
-│   ├── ChatArea.tsx         # Messages + input (uses contexts)
-│   ├── Message.tsx          # Message display + edit
+│   ├── ChatArea.tsx         # Messages + input (uses contexts & custom hooks)
+│   ├── Message.tsx          # Message display + edit + images
+│   ├── ImageBadge.tsx       # Image thumbnail for input area
+│   ├── ImagePreviewModal.tsx # Full-screen image preview
 │   ├── EmptyState.tsx       # No chat selected view
 │   ├── SettingsModal.tsx    # App settings dialog
 │   ├── ChatSettingsModal.tsx # Per-conversation settings (uses contexts)
@@ -37,7 +43,7 @@ src/
 **Context System** (eliminates prop drilling):
 - **ChatContext**: `chats`, `currentChat`, `createChat()`, `deleteChat()`, `selectChat()`, `updateChatMessages()`, `updateChatTitle()`, `updateSystemPrompt()`
 - **ModelContext**: `models`, `selectedModel`, `setSelectedModel()`, `fetchModels()`
-- **UIContext**: `input`, `isStreaming`, `showSettings`, `showChatSettings`, `showHelp`, `zoomLevel`, `showZoomIndicator`, + setters/toggles
+- **UIContext**: `input`, `isStreaming`, `showSettings`, `showChatSettings`, `showHelp`, `zoomLevel`, `showZoomIndicator`, `attachedImages`, `previewImage`, + setters/toggles, `attachImage()`, `removeImage()`, `clearImages()`, `setPreviewImage()`
 - **NotificationContext**: `toasts`, `showError()`, `showSuccess()`, `removeToast()`
 
 **Data Flow**:
