@@ -66,7 +66,7 @@ export function Message({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`group relative max-w-[80%] px-4 py-3 rounded-2xl ${
+        className={`group relative ${isEditing ? "w-full" : "max-w-[80%]"} px-4 py-3 rounded-2xl ${
           isUser
             ? "bg-blue-600 text-white"
             : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
@@ -228,7 +228,7 @@ export function Message({
                 }
               }}
               autoFocus
-              rows={3}
+              rows={4}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
             />
             <div className="flex justify-end gap-2 mt-2">

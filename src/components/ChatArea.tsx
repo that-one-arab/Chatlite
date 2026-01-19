@@ -11,7 +11,7 @@ import { ImagePreviewModal } from "./modals/ImagePreviewModal";
 interface ChatAreaProps {
   messagesEndRef: RefObject<HTMLDivElement>;
   messagesContainerRef: RefObject<HTMLDivElement>;
-  inputRef: RefObject<HTMLInputElement>;
+  inputRef: RefObject<HTMLTextAreaElement>;
   llmSelectRef?: RefObject<HTMLButtonElement>;
   onWheel: (e: WheelEvent) => void;
   onUpdateChatTitle: (chatId: string, firstMessage: string, model: string) => void;
@@ -81,6 +81,20 @@ export function ChatArea({
     setEditingMessageIndex(null);
     setEditContent("");
   }, [currentChat?.id]);
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (inputRef.current) {
+      const textarea = inputRef.current;
+      textarea.style.height = "44px"; // Reset to min height
+      const scrollHeight = textarea.scrollHeight;
+      const newHeight = Math.min(scrollHeight, 200);
+      textarea.style.height = `${newHeight}px`;
+
+      // Only show scrollbar when content exceeds max height
+      textarea.style.overflowY = scrollHeight > 200 ? "auto" : "hidden";
+    }
+  }, [input]);
 
   const handleStartEdit = (index: number, content: string) => {
     setEditingMessageIndex(index);
@@ -241,10 +255,9 @@ export function ChatArea({
             </div>
           )}
 
-          <div class="flex gap-2">
-            <input
+          <div class="flex gap-2 items-end">
+            <textarea
               ref={inputRef}
-              type="text"
               value={input}
               onInput={(e) => setInput(e.currentTarget.value)}
               onPaste={handlePaste}
@@ -255,12 +268,14 @@ export function ChatArea({
                 }
               }}
               placeholder="Message..."
-              class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              rows={1}
+              class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+              style="min-height: 44px; overflow-y: hidden;"
             />
             {isStreaming ? (
               <button
                 onClick={stopGeneration}
-                class="px-5 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition text-sm font-medium"
+                class="px-5 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition text-sm font-medium flex-shrink-0"
               >
                 Stop
               </button>
@@ -268,7 +283,7 @@ export function ChatArea({
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() && attachedImages.length === 0}
-                class="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                class="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex-shrink-0"
               >
                 Send
               </button>

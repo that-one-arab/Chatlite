@@ -40,7 +40,7 @@ function AppContent() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const llmSelectRef = useRef<HTMLButtonElement>(null);
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { messagesEndRef, messagesContainerRef, handleWheel, setAutoScroll } = useAutoScroll({
     messages: currentChat?.messages,
