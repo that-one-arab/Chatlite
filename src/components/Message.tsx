@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useState, memo } from "preact/compat";
 import type { ComponentChildren } from "preact";
 import Markdown from "markdown-to-jsx";
 import type { Message as MessageType } from "@/types";
@@ -35,7 +35,7 @@ function formatTimestamp(timestamp?: number): string | null {
   return `${dateStr}, ${timeStr}`;
 }
 
-export function Message({
+export const Message = memo(function Message({
   message,
   index,
   isEditing,
@@ -251,4 +251,4 @@ export function Message({
       </div>
     </div>
   );
-}
+});

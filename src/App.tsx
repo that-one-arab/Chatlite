@@ -3,7 +3,6 @@ import { appDataDir } from "@tauri-apps/api/path";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { Settings } from "@/types";
-import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import {
   AppProviders,
@@ -27,7 +26,6 @@ function AppContent() {
   const { chats, currentChat, setChats, updateChatTitle, selectChat } = useChatContext();
   const { selectedModel, setSelectedModel, fetchModels } = useModelContext();
   const {
-    isStreaming,
     zoomLevel,
     setZoomLevel,
     setShowZoomIndicator,
@@ -37,20 +35,21 @@ function AppContent() {
 
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [renderedChatIds, setRenderedChatIds] = useState<Set<string>>(new Set());
   const llmSelectRef = useRef<HTMLButtonElement>(null);
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const { messagesEndRef, messagesContainerRef, handleWheel, setAutoScroll } = useAutoScroll({
-    messages: currentChat?.messages,
-    isStreaming,
-  });
 
   // Initialize app
   useEffect(() => {
     initApp();
   }, []);
+
+  // Track rendered chats for lazy rendering
+  useEffect(() => {
+    if (currentChat) {
+      setRenderedChatIds((prev) => new Set(prev).add(currentChat.id));
+    }
+  }, [currentChat]);
 
   const initApp = async () => {
     try {
@@ -303,7 +302,10 @@ The title would be used as the chat title in the sidebar.
 
   useHotkeys(
     {
-      onFocusInput: () => inputRef.current?.focus(),
+      onFocusInput: () => {
+        // Focus is handled by each ChatArea's own inputRef
+        // This is a no-op for now, but maintained for consistency
+      },
       onNewChat: () => {}, // Will be handled in Sidebar
       onOpenModelDropdown: openLlmSelector,
       onOpenSettings: () => showModal(MODAL_NAMES.SETTINGS),
@@ -323,21 +325,17 @@ The title would be used as the chat title in the sidebar.
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
 
-      <div class="flex-1 flex flex-col">
-        {currentChat ? (
+      <div class="flex-1 flex flex-col relative">
+        {chats.filter(c => renderedChatIds.has(c.id)).map((chat) => (
           <ChatArea
-            messagesEndRef={messagesEndRef}
-            messagesContainerRef={messagesContainerRef}
-            inputRef={inputRef}
+            key={chat.id}
+            chat={chat}
+            isActive={currentChat?.id === chat.id}
             llmSelectRef={llmSelectRef}
-            onWheel={handleWheel}
             onUpdateChatTitle={handleUpdateChatTitle}
-            abortControllerRef={abortControllerRef}
-            setAutoScroll={setAutoScroll}
           />
-        ) : (
-          <EmptyState />
-        )}
+        ))}
+        {!currentChat && <EmptyState />}
       </div>
 
       <SettingsModal
@@ -363,7 +361,7 @@ The title would be used as the chat title in the sidebar.
       <LlmSelectorModal
         isOpen={isModalOpen(MODAL_NAMES.LLM_SELECTOR)}
         onClose={() => hideModal(MODAL_NAMES.LLM_SELECTOR)}
-        onSelect={() => inputRef.current?.focus()}
+        onSelect={() => {}}
       />
 
       <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">

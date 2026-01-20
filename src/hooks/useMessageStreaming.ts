@@ -37,30 +37,31 @@ function prepareMessagesForAPI(
 }
 
 interface UseMessageStreamingParams {
+  chatId: string;
   selectedModel: string;
   abortControllerRef: RefObject<AbortController | null>;
-  setIsStreaming: (streaming: boolean) => void;
+  setStreamingChatId: (chatId: string | null) => void;
   setAutoScroll: (autoScroll: boolean) => void;
   updateChatMessages: (chatId: string, messages: Message[]) => void;
   showError: (message: string) => void;
 }
 
 export function useMessageStreaming({
+  chatId,
   selectedModel,
   abortControllerRef,
-  setIsStreaming,
+  setStreamingChatId,
   setAutoScroll,
   updateChatMessages,
   showError,
 }: UseMessageStreamingParams) {
   const streamResponse = useCallback(
     async (
-      chatId: string,
       systemPrompt: string | undefined,
       conversationHistory: Message[],
       imagesToSend?: AttachedImage[]
     ) => {
-      setIsStreaming(true);
+      setStreamingChatId(chatId);
       setAutoScroll(true);
 
       const controller = new AbortController();
@@ -162,14 +163,15 @@ export function useMessageStreaming({
           updateChatMessages(chatId, streamingMessages);
         }
       } finally {
-        setIsStreaming(false);
+        setStreamingChatId(null);
         abortControllerRef.current = null;
       }
     },
     [
+      chatId,
       selectedModel,
       abortControllerRef,
-      setIsStreaming,
+      setStreamingChatId,
       setAutoScroll,
       updateChatMessages,
       showError,

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import type { RefObject } from "preact";
-import { useChatContext, useModelContext, useUIContext, useNotificationContext, useModalContext, MODAL_NAMES } from "@/contexts";
+import type { Chat, AttachedImage } from "@/types";
+import { useModelContext, useUIContext, useNotificationContext, useModalContext, MODAL_NAMES, useChatContext } from "@/contexts";
 import { useImageAttachment } from "@/hooks/useImageAttachment";
 import { useMessageStreaming } from "@/hooks/useMessageStreaming";
 import { createUserMessage, createAssistantMessage, canSendMessage, getMessageText } from "@/utils/messageHelpers";
@@ -9,39 +10,25 @@ import { ImageBadge } from "./ImageBadge";
 import { ImagePreviewModal } from "./modals/ImagePreviewModal";
 
 interface ChatAreaProps {
-  messagesEndRef: RefObject<HTMLDivElement>;
-  messagesContainerRef: RefObject<HTMLDivElement>;
-  inputRef: RefObject<HTMLTextAreaElement>;
+  chat: Chat;
+  isActive: boolean;
   llmSelectRef?: RefObject<HTMLButtonElement>;
-  onWheel: (e: WheelEvent) => void;
   onUpdateChatTitle: (chatId: string, firstMessage: string, model: string) => void;
-  abortControllerRef: RefObject<AbortController | null>;
-  setAutoScroll: (autoScroll: boolean) => void;
 }
 
 export function ChatArea({
-  messagesEndRef,
-  messagesContainerRef,
-  inputRef,
+  chat,
+  isActive,
   llmSelectRef,
-  onWheel,
   onUpdateChatTitle,
-  abortControllerRef,
-  setAutoScroll,
 }: ChatAreaProps) {
-  const { currentChat, updateChatMessages } = useChatContext();
+  const { updateChatMessages } = useChatContext();
   const { selectedModel } = useModelContext();
   const {
-    input,
-    isStreaming,
+    streamingChatId,
     zoomLevel,
     showZoomIndicator,
-    attachedImages,
-    setInput,
-    setIsStreaming,
-    attachImage,
-    removeImage,
-    clearImages,
+    setStreamingChatId,
   } = useUIContext();
   const { showModal, hideModal } = useModalContext();
   const { showError } = useNotificationContext();
@@ -49,18 +36,50 @@ export function ChatArea({
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+  const [autoScroll, setAutoScroll] = useState(false);
 
-  const handleImagePreview = (imageUrl: string) => {
+  // Refs
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const hasScrolledInitially = useRef(false);
+
+  const isStreaming = streamingChatId === chat.id;
+
+  // Initial scroll to bottom when first opened
+  useEffect(() => {
+    if (isActive && !hasScrolledInitially.current) {
+      hasScrolledInitially.current = true;
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isActive]);
+
+  const handleImagePreview = useCallback((imageUrl: string) => {
     setPreviewImageUrl(imageUrl);
     showModal(MODAL_NAMES.IMAGE_PREVIEW);
-  };
+  }, [showModal]);
 
-  const handleCloseImagePreview = () => {
+  const handleCloseImagePreview = useCallback(() => {
     hideModal(MODAL_NAMES.IMAGE_PREVIEW);
     setPreviewImageUrl(null);
-  };
+  }, [hideModal]);
 
-  // Custom hooks
+  // Image attachment
+  const attachImage = useCallback((image: AttachedImage) => {
+    setAttachedImages((prev) => [...prev, image]);
+  }, []);
+
+  const removeImage = useCallback((imageId: string) => {
+    setAttachedImages((prev) => prev.filter((img) => img.id !== imageId));
+  }, []);
+
+  const clearImages = useCallback(() => {
+    setAttachedImages([]);
+  }, []);
+
   const { handlePaste } = useImageAttachment({
     attachedImages,
     attachImage,
@@ -68,19 +87,47 @@ export function ChatArea({
   });
 
   const { streamResponse, stopGeneration } = useMessageStreaming({
+    chatId: chat.id,
     selectedModel,
     abortControllerRef,
-    setIsStreaming,
+    setStreamingChatId,
     setAutoScroll,
     updateChatMessages,
     showError,
   });
 
+  // Auto-scroll effect
+  useEffect(() => {
+    if (autoScroll && isActive) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chat.messages, autoScroll, isActive]);
+
+  // Detect user scrolling during streaming
+  const handleWheel = (e: WheelEvent) => {
+    if (!isStreaming) return;
+
+    if (autoScroll && e.deltaY < 0) {
+      // User scrolled up, disable auto-scroll
+      setAutoScroll(false);
+    } else if (!autoScroll && e.deltaY > 0) {
+      // User scrolled down, check if at bottom to re-enable auto-scroll
+      const container = messagesContainerRef.current;
+      if (container) {
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        if (distanceFromBottom < 50) {
+          setAutoScroll(true);
+        }
+      }
+    }
+  };
+
   // Reset edit state when chat changes
   useEffect(() => {
     setEditingMessageIndex(null);
     setEditContent("");
-  }, [currentChat?.id]);
+  }, [chat.id]);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -96,34 +143,34 @@ export function ChatArea({
     }
   }, [input]);
 
-  const handleStartEdit = (index: number, content: string) => {
+  const handleStartEdit = useCallback((index: number, content: string) => {
     setEditingMessageIndex(index);
     setEditContent(content);
     clearImages();
-  };
+  }, [clearImages]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingMessageIndex(null);
     setEditContent("");
-  };
+  }, []);
 
-  const sendMessage = async () => {
-    if (!currentChat || !canSendMessage(input, attachedImages, isStreaming)) return;
+  const sendMessage = useCallback(async () => {
+    if (!canSendMessage(input, attachedImages, isStreaming)) return;
 
     // Prepare message
     const messageText = getMessageText(input, attachedImages.length > 0);
     const imagesToSend = [...attachedImages];
-    const currentMessages = currentChat.messages;
+    const currentMessages = chat.messages;
 
     const userMessage = createUserMessage(messageText, imagesToSend);
     const assistantMessage = createAssistantMessage();
 
     // Update chat state
-    updateChatMessages(currentChat.id, [...currentMessages, userMessage, assistantMessage]);
+    updateChatMessages(chat.id, [...currentMessages, userMessage, assistantMessage]);
 
     // Update title for first message
     if (currentMessages.length === 0) {
-      onUpdateChatTitle(currentChat.id, messageText, selectedModel);
+      onUpdateChatTitle(chat.id, messageText, selectedModel);
     }
 
     // Clear input
@@ -132,27 +179,26 @@ export function ChatArea({
 
     // Stream response
     await streamResponse(
-      currentChat.id,
-      currentChat.systemPrompt,
+      chat.systemPrompt,
       [...currentMessages, userMessage],
       imagesToSend
     );
-  };
+  }, [input, attachedImages, isStreaming, chat.messages, chat.id, chat.systemPrompt, updateChatMessages, onUpdateChatTitle, selectedModel, clearImages, streamResponse]);
 
-  const handleSaveEdit = (index: number, newContent: string) => {
-    if (!currentChat || !newContent.trim() || isStreaming) return;
+  const handleSaveEdit = useCallback((index: number, newContent: string) => {
+    if (!newContent.trim() || isStreaming) return;
 
     // Truncate messages at edit point and update edited message
-    const truncatedMessages = currentChat.messages.slice(0, index + 1);
+    const truncatedMessages = chat.messages.slice(0, index + 1);
     truncatedMessages[index] = createUserMessage(newContent);
     const assistantMessage = createAssistantMessage();
 
     // Update chat state
-    updateChatMessages(currentChat.id, [...truncatedMessages, assistantMessage]);
+    updateChatMessages(chat.id, [...truncatedMessages, assistantMessage]);
 
     // Regenerate title if editing first message
     if (index === 0) {
-      onUpdateChatTitle(currentChat.id, newContent, selectedModel);
+      onUpdateChatTitle(chat.id, newContent, selectedModel);
     }
 
     // Clear edit state
@@ -160,13 +206,19 @@ export function ChatArea({
     setEditContent("");
 
     // Stream new response
-    streamResponse(currentChat.id, currentChat.systemPrompt, truncatedMessages);
-  };
-
-  if (!currentChat) return null;
+    streamResponse(chat.systemPrompt, truncatedMessages);
+  }, [isStreaming, chat.messages, chat.id, chat.systemPrompt, updateChatMessages, onUpdateChatTitle, selectedModel, streamResponse]);
 
   return (
-    <>
+    <div style={{
+      display: isActive ? 'flex' : 'none',
+      flexDirection: 'column',
+      position: isActive ? 'relative' : 'absolute',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+    }}>
       {/* Header */}
       <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
         {/* LLM Selector Button - Centered */}
@@ -220,9 +272,9 @@ export function ChatArea({
       </div>
 
       {/* Messages */}
-      <div ref={messagesContainerRef} onWheel={onWheel} class="flex-1 overflow-y-auto p-4">
+      <div ref={messagesContainerRef} onWheel={handleWheel} class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto space-y-4">
-          {currentChat.messages.map((msg, idx) => (
+          {chat.messages.map((msg, idx) => (
             <Message
               key={idx}
               message={msg}
@@ -231,7 +283,7 @@ export function ChatArea({
               editContent={editContent}
               canEdit={msg.role === "user" && !isStreaming}
               isStreaming={isStreaming}
-              isLastMessage={idx === currentChat.messages.length - 1}
+              isLastMessage={idx === chat.messages.length - 1}
               onStartEdit={handleStartEdit}
               onCancelEdit={handleCancelEdit}
               onSaveEdit={handleSaveEdit}
@@ -294,6 +346,6 @@ export function ChatArea({
 
       {/* Image Preview Modal */}
       <ImagePreviewModal imageUrl={previewImageUrl} onClose={handleCloseImagePreview} />
-    </>
+    </div>
   );
 }
