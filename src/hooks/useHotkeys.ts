@@ -116,23 +116,22 @@ export function useHotkeys(
         return;
       }
 
-      // Navigation shortcuts - only when not typing
+      // Alt + Up - Previous chat (works even when typing)
+      if (e.altKey && e.key === "ArrowUp") {
+        e.preventDefault();
+        actions.onNavigatePrev();
+        return;
+      }
+
+      // Alt + Down - Next chat (works even when typing)
+      if (e.altKey && e.key === "ArrowDown") {
+        e.preventDefault();
+        actions.onNavigateNext();
+        return;
+      }
+
+      // J/K vim-style navigation - only when not typing
       if (!isTyping) {
-        // Alt + Up - Previous chat
-        if (e.altKey && e.key === "ArrowUp") {
-          e.preventDefault();
-          actions.onNavigatePrev();
-          return;
-        }
-
-        // Alt + Down - Next chat
-        if (e.altKey && e.key === "ArrowDown") {
-          e.preventDefault();
-          actions.onNavigateNext();
-          return;
-        }
-
-        // J/K vim-style navigation
         if (e.key === "j") {
           e.preventDefault();
           actions.onNavigateNext();

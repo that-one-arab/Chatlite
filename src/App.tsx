@@ -303,8 +303,12 @@ The title would be used as the chat title in the sidebar.
   useHotkeys(
     {
       onFocusInput: () => {
-        // Focus is handled by each ChatArea's own inputRef
-        // This is a no-op for now, but maintained for consistency
+        // Find the visible textarea (in the active chat)
+        const textareas = document.querySelectorAll('textarea[placeholder="Message..."]');
+        const visibleTextarea = Array.from(textareas).find(
+          (ta) => (ta as HTMLTextAreaElement).offsetParent !== null
+        ) as HTMLTextAreaElement;
+        visibleTextarea?.focus();
       },
       onNewChat: () => {}, // Will be handled in Sidebar
       onOpenModelDropdown: openLlmSelector,
