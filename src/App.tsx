@@ -4,6 +4,7 @@ import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-f
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { Settings } from "@/types";
 import { useHotkeys } from "@/hooks/useHotkeys";
+import { chatStorage } from "@/services/chatStorage";
 import {
   AppProviders,
   useChatContext,
@@ -23,7 +24,14 @@ import { LlmSelectorModal } from "@/components/modals/LlmSelectorModal";
 import { Toast } from "@/components/Toast";
 
 function AppContent() {
-  const { chats, currentChat, setChats, updateChatTitle, selectChat } = useChatContext();
+  const {
+    chatMetadata,
+    currentChat,
+    updateChatTitle,
+    selectChat,
+    refreshMetadata,
+    loadChatIntoMemory,
+  } = useChatContext();
   const { selectedModel, setSelectedModel, fetchModels } = useModelContext();
   const {
     zoomLevel,
@@ -35,7 +43,6 @@ function AppContent() {
 
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
-  const [renderedChatIds, setRenderedChatIds] = useState<Set<string>>(new Set());
   const llmSelectRef = useRef<HTMLButtonElement>(null);
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
 
@@ -43,13 +50,6 @@ function AppContent() {
   useEffect(() => {
     initApp();
   }, []);
-
-  // Track rendered chats for lazy rendering
-  useEffect(() => {
-    if (currentChat) {
-      setRenderedChatIds((prev) => new Set(prev).add(currentChat.id));
-    }
-  }, [currentChat]);
 
   const initApp = async () => {
     try {
@@ -104,33 +104,28 @@ function AppContent() {
 
   const loadChats = async (path: string) => {
     try {
-      const chatsPath = `${path}/chats.json`;
-      const fileExists = await exists(chatsPath);
+      // Initialize storage (runs migration if needed)
+      await chatStorage.initializeStorage(path);
 
-      if (fileExists) {
-        const content = await readTextFile(chatsPath);
-        const parsed = JSON.parse(content);
-        setChats(parsed);
-        if (parsed.length > 0) {
-          selectChat(parsed[0].id);
-          if (parsed[0].model) {
-            setSelectedModel(parsed[0].model);
-          }
+      // Load metadata
+      const metadata = await chatStorage.loadMetadata(path);
+      refreshMetadata(metadata);
+
+      // Load first chat if available
+      if (metadata.length > 0) {
+        const firstChat = await chatStorage.loadChat(path, metadata[0].id);
+        loadChatIntoMemory(firstChat);
+        selectChat(firstChat.id);
+        if (firstChat.model) {
+          setSelectedModel(firstChat.model);
         }
       }
     } catch (error) {
       console.error("Error loading chats:", error);
+      showError("Failed to load chats");
     }
   };
 
-  const saveChats = async (updatedChats: typeof chats) => {
-    try {
-      const chatsPath = `${storagePath}/chats.json`;
-      await writeTextFile(chatsPath, JSON.stringify(updatedChats, null, 2));
-    } catch (error) {
-      console.error("Error saving chats:", error);
-    }
-  };
 
   const saveSettings = async (model: string, path: string, zoom?: number) => {
     try {
@@ -186,12 +181,17 @@ function AppContent() {
     };
   }, []);
 
-  // Auto-save chats
+  // Auto-save current chat (debounced for streaming)
   useEffect(() => {
-    if (chats.length > 0 && storagePath) {
-      saveChats(chats);
+    if (currentChat && storagePath) {
+      const timer = setTimeout(() => {
+        chatStorage.saveChat(storagePath, currentChat).catch((error) => {
+          console.error("Failed to save chat:", error);
+        });
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [chats, storagePath]);
+  }, [currentChat?.messages, currentChat?.title, currentChat?.systemPrompt, storagePath]);
 
   // Auto-save model selection
   useEffect(() => {
@@ -253,8 +253,9 @@ The title would be used as the chat title in the sidebar.
         await mkdir(customPath, { recursive: true });
       }
 
-      if (chats.length > 0 && storagePath) {
-        await saveChats(chats);
+      // Save current chat to old location first
+      if (currentChat && storagePath) {
+        await chatStorage.saveChat(storagePath, currentChat);
       }
 
       setStoragePath(customPath);
@@ -264,37 +265,61 @@ The title would be used as the chat title in the sidebar.
       hideModal(MODAL_NAMES.SETTINGS);
     } catch (error) {
       console.error("Error changing storage path:", error);
-      alert("Failed to change storage path. Check console for details.");
+      showError("Failed to change storage path");
     }
   };
 
   // Navigation helpers for hotkeys
-  const navigateToPrevChat = useCallback(() => {
-    if (chats.length === 0) return;
-    const currentIndex = chats.findIndex((c) => c.id === currentChat?.id);
+  const navigateToPrevChat = useCallback(async () => {
+    if (chatMetadata.length === 0) return;
+    const currentIndex = chatMetadata.findIndex((c) => c.id === currentChat?.id);
     if (currentIndex > 0) {
-      selectChat(chats[currentIndex - 1].id);
-      if (chats[currentIndex - 1].model) {
-        setSelectedModel(chats[currentIndex - 1].model);
+      const prevChat = chatMetadata[currentIndex - 1];
+      selectChat(prevChat.id);
+      if (prevChat.model) {
+        setSelectedModel(prevChat.model);
+      }
+      // Load chat if not already loaded
+      try {
+        const chat = await chatStorage.loadChat(storagePath, prevChat.id);
+        loadChatIntoMemory(chat);
+      } catch (error) {
+        console.error("Failed to load chat:", error);
       }
     }
-  }, [chats, currentChat, selectChat, setSelectedModel]);
+  }, [chatMetadata, currentChat, selectChat, setSelectedModel, storagePath, loadChatIntoMemory]);
 
-  const navigateToNextChat = useCallback(() => {
-    if (chats.length === 0) return;
-    const currentIndex = chats.findIndex((c) => c.id === currentChat?.id);
-    if (currentIndex < chats.length - 1) {
-      selectChat(chats[currentIndex + 1].id);
-      if (chats[currentIndex + 1].model) {
-        setSelectedModel(chats[currentIndex + 1].model);
+  const navigateToNextChat = useCallback(async () => {
+    if (chatMetadata.length === 0) return;
+    const currentIndex = chatMetadata.findIndex((c) => c.id === currentChat?.id);
+    if (currentIndex < chatMetadata.length - 1) {
+      const nextChat = chatMetadata[currentIndex + 1];
+      selectChat(nextChat.id);
+      if (nextChat.model) {
+        setSelectedModel(nextChat.model);
       }
-    } else if (currentIndex === -1) {
-      selectChat(chats[0].id);
-      if (chats[0].model) {
-        setSelectedModel(chats[0].model);
+      // Load chat if not already loaded
+      try {
+        const chat = await chatStorage.loadChat(storagePath, nextChat.id);
+        loadChatIntoMemory(chat);
+      } catch (error) {
+        console.error("Failed to load chat:", error);
+      }
+    } else if (currentIndex === -1 && chatMetadata.length > 0) {
+      const firstChat = chatMetadata[0];
+      selectChat(firstChat.id);
+      if (firstChat.model) {
+        setSelectedModel(firstChat.model);
+      }
+      // Load chat if not already loaded
+      try {
+        const chat = await chatStorage.loadChat(storagePath, firstChat.id);
+        loadChatIntoMemory(chat);
+      } catch (error) {
+        console.error("Failed to load chat:", error);
       }
     }
-  }, [chats, currentChat, selectChat, setSelectedModel]);
+  }, [chatMetadata, currentChat, selectChat, setSelectedModel, storagePath, loadChatIntoMemory]);
 
   const openLlmSelector = useCallback(() => {
     showModal(MODAL_NAMES.LLM_SELECTOR);
@@ -330,15 +355,15 @@ The title would be used as the chat title in the sidebar.
       <Sidebar />
 
       <div class="flex-1 flex flex-col relative">
-        {chats.filter(c => renderedChatIds.has(c.id)).map((chat) => (
+        {currentChat && (
           <ChatArea
-            key={chat.id}
-            chat={chat}
-            isActive={currentChat?.id === chat.id}
+            key={currentChat.id}
+            chat={currentChat}
+            isActive={true}
             llmSelectRef={llmSelectRef}
             onUpdateChatTitle={handleUpdateChatTitle}
           />
-        ))}
+        )}
         {!currentChat && <EmptyState />}
       </div>
 

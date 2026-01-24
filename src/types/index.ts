@@ -6,12 +6,22 @@ export interface Message {
   images?: string[];  // Array of data URLs for displaying images
 }
 
+export interface ChatMetadataEntry {
+  id: string;
+  title: string;
+  model: string;
+  lastModified: number;
+  messageCount: number;
+}
+
 export interface Chat {
   id: string;
   title: string;
   messages: Message[];
   model: string;
   systemPrompt?: string;
+  createdAt: number;
+  lastModified: number;
 }
 
 export interface Settings {
