@@ -27,6 +27,7 @@ function AppContent() {
   const {
     chatMetadata,
     currentChat,
+    createChat,
     updateChatTitle,
     selectChat,
     refreshMetadata,
@@ -325,6 +326,14 @@ The title would be used as the chat title in the sidebar.
     showModal(MODAL_NAMES.LLM_SELECTOR);
   }, [showModal]);
 
+  const handleNewChat = useCallback(() => {
+    // If current chat is empty, don't create a new one
+    if (currentChat && currentChat.messages.length === 0) {
+      return;
+    }
+    createChat(selectedModel);
+  }, [currentChat, createChat, selectedModel]);
+
   useHotkeys(
     {
       onFocusInput: () => {
@@ -335,7 +344,7 @@ The title would be used as the chat title in the sidebar.
         ) as HTMLTextAreaElement;
         visibleTextarea?.focus();
       },
-      onNewChat: () => {}, // Will be handled in Sidebar
+      onNewChat: handleNewChat,
       onOpenModelDropdown: openLlmSelector,
       onOpenSettings: () => showModal(MODAL_NAMES.SETTINGS),
       onOpenChatSettings: () => currentChat && showModal(MODAL_NAMES.CHAT_SETTINGS),
