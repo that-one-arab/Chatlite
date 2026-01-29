@@ -15,6 +15,37 @@ export default defineConfig(async () => ({
     },
   },
 
+  // Build optimizations for smaller bundle size
+  build: {
+    // Target modern browsers for smaller polyfills
+    target: "es2022",
+    // Minification settings
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        passes: 2,
+      },
+      mangle: {
+        properties: {
+          regex: /^_/,
+        },
+      },
+    },
+    // Rollup options for better chunking
+    rollupOptions: {
+      output: {
+        // Inline small assets to reduce HTTP requests
+        inlineDynamicImports: true,
+        // Manual chunking if needed (currently inline everything for Tauri)
+        manualChunks: undefined,
+      },
+    },
+    // Reduce chunk size warning threshold
+    chunkSizeWarningLimit: 500,
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors

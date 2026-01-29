@@ -7,6 +7,19 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# Optimize for binary size
+[profile.release]
+# LTO can reduce binary size significantly by removing unused code across crates
+lto = true
+# Strip symbols from the binary
+strip = true
+# Optimize for size instead of speed (-Os equivalent)
+opt-level = "z"
+# Enable link-time optimization for dependencies too
+codegen-units = 1
+# Panic at abort removes unwinding machinery
+panic = "abort"
+
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.

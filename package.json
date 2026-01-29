@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "measure-size": "node scripts/measure-bundle-size.js",
-    "setup-hooks": "node scripts/setup-hooks.js"
+    "setup-hooks": "node scripts/setup-hooks.js",
+    "optimize": "node scripts/optimize-release.js",
+    "optimize:upx": "node scripts/optimize-release.js --upx",
+    "build:release": "bun run tauri build && bun run optimize"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
@@ -26,6 +29,7 @@
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
+    "terser": "^5.46.0",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
   }

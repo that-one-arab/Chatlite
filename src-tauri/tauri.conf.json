@@ -31,6 +31,13 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-",
+      "entitlements": null,
+      "exceptionDomain": null
+    }
   }
 }
