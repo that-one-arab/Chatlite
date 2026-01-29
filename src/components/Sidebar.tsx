@@ -35,7 +35,7 @@ export function Sidebar() {
     loadedChats,
   } = useChatContext();
   const { selectedModel, setSelectedModel } = useModelContext();
-  const { draftChat, setDraftChat, isSidebarOpen, toggleSidebar } = useUIContext();
+  const { draftChat, setDraftChat, clearDraft, isSidebarOpen, toggleSidebar } = useUIContext();
   const { showModal } = useModalContext();
   const [storagePath, setStoragePath] = useState("");
 
@@ -60,12 +60,16 @@ export function Sidebar() {
     if (draftChat || (currentChat && currentChat.messages.length === 0)) {
       return;
     }
-    // Enter draft mode - show blank chat area without creating a chat
-    setDraftChat({ model: selectedModel });
+    // Clear current chat and enter draft mode - show blank chat area without creating a chat
     selectChat(null);
+    setDraftChat({ model: selectedModel });
   };
 
   const handleSelectChat = async (chatId: string) => {
+    // Clear draft mode when selecting an existing chat
+    if (draftChat) {
+      clearDraft();
+    }
     selectChat(chatId);
     const metadata = chatMetadata.find((c) => c.id === chatId);
     if (metadata?.model) {

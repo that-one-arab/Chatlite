@@ -335,9 +335,9 @@ The title would be used as the chat title in the sidebar.
     if (draftChat || (currentChat && currentChat.messages.length === 0)) {
       return;
     }
-    // Enter draft mode - show blank chat area without creating a chat
-    setDraftChat({ model: selectedModel });
+    // Clear current chat and enter draft mode - show blank chat area without creating a chat
     selectChat(null);
+    setDraftChat({ model: selectedModel });
   }, [draftChat, currentChat, selectedModel, setDraftChat, selectChat]);
 
   useHotkeys(
@@ -371,7 +371,7 @@ The title would be used as the chat title in the sidebar.
       <Sidebar />
 
       <div class="flex-1 flex flex-col relative">
-        {currentChat && (
+        {currentChat ? (
           <ChatArea
             key={currentChat.id}
             chat={currentChat}
@@ -379,8 +379,7 @@ The title would be used as the chat title in the sidebar.
             llmSelectRef={llmSelectRef}
             onUpdateChatTitle={handleUpdateChatTitle}
           />
-        )}
-        {draftChat && (
+        ) : draftChat ? (
           <ChatArea
             key="draft"
             draft={draftChat}
@@ -390,8 +389,9 @@ The title would be used as the chat title in the sidebar.
             onCreateChat={createChat}
             onClearDraft={clearDraft}
           />
+        ) : (
+          <EmptyState />
         )}
-        {!currentChat && !draftChat && <EmptyState />}
       </div>
 
       <SettingsModal
