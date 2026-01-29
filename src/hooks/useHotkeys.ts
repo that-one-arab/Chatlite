@@ -13,6 +13,7 @@ interface HotkeyActions {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  onToggleSidebar: () => void;
 }
 
 interface UseHotkeysOptions {
@@ -83,6 +84,13 @@ export function useHotkeys(
         } else {
           actions.onOpenSettings();
         }
+        return;
+      }
+
+      // Cmd/Ctrl + B - Toggle sidebar
+      if (isMod && e.key === "b") {
+        e.preventDefault();
+        actions.onToggleSidebar();
         return;
       }
 
@@ -160,6 +168,7 @@ export const HOTKEYS = [
   { keys: ["⌘", "M"], description: "Select model" },
   { keys: ["⌘", ","], description: "Open settings" },
   { keys: ["⌘", "⇧", ","], description: "Conversation settings" },
+  { keys: ["⌘", "B"], description: "Toggle sidebar" },
   { keys: ["Alt", "↑"], description: "Previous conversation" },
   { keys: ["Alt", "↓"], description: "Next conversation" },
   { keys: ["J / K"], description: "Navigate conversations" },

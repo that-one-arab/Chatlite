@@ -41,6 +41,7 @@ function AppContent() {
     draftChat,
     setDraftChat,
     clearDraft,
+    toggleSidebar,
   } = useUIContext();
   const { toasts, showError, removeToast } = useNotificationContext();
   const { showModal, hideModal, hideAllModals, isModalOpen, isAnyModalOpen } = useModalContext();
@@ -360,6 +361,7 @@ The title would be used as the chat title in the sidebar.
       onZoomIn: zoomIn,
       onZoomOut: zoomOut,
       onZoomReset: resetZoom,
+      onToggleSidebar: toggleSidebar,
     },
     { isModalOpen: isAnyModalOpen() }
   );

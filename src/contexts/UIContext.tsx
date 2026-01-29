@@ -11,11 +11,14 @@ interface UIContextValue {
   zoomLevel: number;
   showZoomIndicator: boolean;
   draftChat: DraftChat | null;
+  isSidebarOpen: boolean;
   setStreamingChatId: (chatId: string | null) => void;
   setZoomLevel: (level: number) => void;
   setShowZoomIndicator: (show: boolean) => void;
   setDraftChat: (draft: DraftChat | null) => void;
   clearDraft: () => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
 }
 
 const UIContext = createContext<UIContextValue | null>(null);
@@ -25,19 +28,25 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
   const [draftChat, setDraftChat] = useState<DraftChat | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const clearDraft = () => setDraftChat(null);
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const setSidebarOpen = (open: boolean) => setIsSidebarOpen(open);
 
   const value: UIContextValue = {
     streamingChatId,
     zoomLevel,
     showZoomIndicator,
     draftChat,
+    isSidebarOpen,
     setStreamingChatId,
     setZoomLevel,
     setShowZoomIndicator,
     setDraftChat,
     clearDraft,
+    toggleSidebar,
+    setSidebarOpen,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
