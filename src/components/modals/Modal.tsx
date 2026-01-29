@@ -1,4 +1,4 @@
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 
 interface ModalProps {
@@ -32,6 +32,9 @@ export function Modal({
   onKeyDown,
   children,
 }: ModalProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   useEffect(() => {
     if (!escapeToClose || !isOpen) return;
 
@@ -45,7 +48,27 @@ export function Modal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, escapeToClose]);
 
-  if (!isOpen) return null;
+  // Handle fade in/out animation
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      // Small delay to allow the element to be in the DOM before starting animation
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+      // Wait for animation to complete before removing from DOM
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isVisible) return null;
 
   const backdropClass = {
     light: "bg-black/60",
@@ -59,14 +82,17 @@ export function Modal({
     }
   };
 
+  const opacityClass = isAnimating ? "opacity-100" : "opacity-0";
+  const scaleClass = isAnimating ? "scale-100" : "scale-95";
+
   return (
     <div
-      class={`fixed inset-0 ${backdropClass} flex items-center justify-center z-50`}
+      class={`fixed inset-0 ${backdropClass} flex items-center justify-center z-50 transition-all duration-200 ease-out ${opacityClass}`}
       onClick={handleBackdropClick}
       onKeyDown={onKeyDown}
     >
       <div
-        class={`bg-white dark:bg-gray-800 rounded-lg p-6 ${width} max-w-full mx-4 ${maxHeight} overflow-y-auto ${contentClassName}`}
+        class={`bg-white dark:bg-gray-800 rounded-lg p-6 ${width} max-w-full mx-4 ${maxHeight} overflow-y-auto ${contentClassName} transition-all duration-200 ease-out ${opacityClass} ${scaleClass}`}
       >
         {(title || showCloseButton) && (
           <div class={`flex items-center justify-between mb-4 ${headerClassName}`}>
