@@ -41,7 +41,6 @@ interface UseMessageStreamingParams {
   selectedModel: string;
   abortControllerRef: RefObject<AbortController | null>;
   setStreamingChatId: (chatId: string | null) => void;
-  setAutoScroll: (autoScroll: boolean) => void;
   updateChatMessages: (chatId: string, messages: Message[]) => void;
   showError: (message: string) => void;
 }
@@ -51,7 +50,6 @@ export function useMessageStreaming({
   selectedModel,
   abortControllerRef,
   setStreamingChatId,
-  setAutoScroll,
   updateChatMessages,
   showError,
 }: UseMessageStreamingParams) {
@@ -62,7 +60,6 @@ export function useMessageStreaming({
       imagesToSend?: AttachedImage[]
     ) => {
       setStreamingChatId(chatId);
-      setAutoScroll(true);
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -172,7 +169,6 @@ export function useMessageStreaming({
       selectedModel,
       abortControllerRef,
       setStreamingChatId,
-      setAutoScroll,
       updateChatMessages,
       showError,
     ]

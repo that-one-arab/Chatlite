@@ -4,6 +4,7 @@ import type { Chat, AttachedImage } from "@/types";
 import { useModelContext, useUIContext, useNotificationContext, useModalContext, MODAL_NAMES, useChatContext } from "@/contexts";
 import { useImageAttachment } from "@/hooks/useImageAttachment";
 import { useMessageStreaming } from "@/hooks/useMessageStreaming";
+import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { createUserMessage, createAssistantMessage, canSendMessage, getMessageText } from "@/utils/messageHelpers";
 import { Message } from "./Message";
 import { ImageBadge } from "./ImageBadge";
@@ -38,7 +39,6 @@ export function ChatArea({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
-  const [autoScroll, setAutoScroll] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -48,6 +48,24 @@ export function ChatArea({
   const hasScrolledInitially = useRef(false);
 
   const isStreaming = streamingChatId === chat.id;
+
+  // Auto-scroll hook
+  const { handleWheel, handleScroll, triggerAutoScroll } = useAutoScroll({
+    isStreaming,
+    messagesContainerRef,
+    messagesEndRef,
+  });
+
+  // Trigger auto-scroll when streaming content changes
+  useEffect(() => {
+    if (isStreaming && isActive) {
+      // Get the last message content to track changes
+      const lastMessage = chat.messages[chat.messages.length - 1];
+      if (lastMessage?.role === "assistant") {
+        triggerAutoScroll();
+      }
+    }
+  }, [chat.messages, isStreaming, isActive, triggerAutoScroll]);
 
   // Initial scroll to bottom when first opened
   useEffect(() => {
@@ -91,37 +109,11 @@ export function ChatArea({
     selectedModel,
     abortControllerRef,
     setStreamingChatId,
-    setAutoScroll,
     updateChatMessages,
     showError,
   });
 
-  // Auto-scroll effect
-  useEffect(() => {
-    if (autoScroll && isActive) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chat.messages, autoScroll, isActive]);
 
-  // Detect user scrolling during streaming
-  const handleWheel = (e: WheelEvent) => {
-    if (!isStreaming) return;
-
-    if (autoScroll && e.deltaY < 0) {
-      // User scrolled up, disable auto-scroll
-      setAutoScroll(false);
-    } else if (!autoScroll && e.deltaY > 0) {
-      // User scrolled down, check if at bottom to re-enable auto-scroll
-      const container = messagesContainerRef.current;
-      if (container) {
-        const { scrollTop, scrollHeight, clientHeight } = container;
-        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-        if (distanceFromBottom < 50) {
-          setAutoScroll(true);
-        }
-      }
-    }
-  };
 
   // Reset edit state when chat changes
   useEffect(() => {
@@ -272,7 +264,7 @@ export function ChatArea({
       </div>
 
       {/* Messages */}
-      <div ref={messagesContainerRef} onWheel={handleWheel} class="flex-1 overflow-y-auto p-4">
+      <div ref={messagesContainerRef} onWheel={handleWheel} onScroll={handleScroll} class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto space-y-4">
           {chat.messages.map((msg, idx) => (
             <Message
