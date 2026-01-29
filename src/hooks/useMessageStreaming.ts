@@ -41,7 +41,7 @@ interface UseMessageStreamingParams {
   selectedModel: string;
   abortControllerRef: RefObject<AbortController | null>;
   setStreamingChatId: (chatId: string | null) => void;
-  updateChatMessages: (chatId: string, messages: Message[]) => void;
+  updateChatMessages: (chatId: string, messages: Message[] | ((prev: Message[]) => Message[])) => void;
   showError: (message: string) => void;
 }
 
@@ -67,11 +67,11 @@ export function useMessageStreaming({
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      // Create local copy of messages to track state during streaming
-      const streamingMessages: Message[] = [
-        ...conversationHistory,
+      // Add the initial empty assistant message using functional update
+      updateChatMessages(targetChatId, (prev) => [
+        ...prev,
         { role: "assistant" as const, content: "", timestamp: Date.now() },
-      ];
+      ]);
 
       // Prepare messages with optional system prompt
       const messages = systemPrompt
@@ -125,16 +125,22 @@ export function useMessageStreaming({
               const thinking = json.message?.thinking;
 
               if (content || thinking) {
-                const lastMsg = streamingMessages[streamingMessages.length - 1];
-                if (lastMsg && lastMsg.role === "assistant") {
-                  if (content) {
-                    lastMsg.content += content;
-                  }
-                  if (thinking) {
-                    lastMsg.thinking = (lastMsg.thinking || "") + thinking;
-                  }
-                  updateChatMessages(targetChatId, streamingMessages);
-                }
+                // Use functional update to append streaming content
+                updateChatMessages(targetChatId, (prev) => {
+                  if (prev.length === 0) return prev;
+                  const lastIndex = prev.length - 1;
+                  const lastMsg = prev[lastIndex];
+                  if (lastMsg.role !== "assistant") return prev;
+
+                  return [
+                    ...prev.slice(0, lastIndex),
+                    {
+                      ...lastMsg,
+                      content: content ? lastMsg.content + content : lastMsg.content,
+                      thinking: thinking ? (lastMsg.thinking || "") + thinking : lastMsg.thinking,
+                    },
+                  ];
+                });
               }
             } catch (e) {
               // Ignore parse errors
@@ -155,12 +161,15 @@ export function useMessageStreaming({
 
           showError(errorMessage);
 
-          // Remove the empty assistant message on error
-          const lastMsg = streamingMessages[streamingMessages.length - 1];
-          if (lastMsg.role === "assistant" && !lastMsg.content) {
-            streamingMessages.pop();
-          }
-          updateChatMessages(targetChatId, streamingMessages);
+          // Remove the empty assistant message on error using functional update
+          updateChatMessages(targetChatId, (prev) => {
+            if (prev.length === 0) return prev;
+            const lastMsg = prev[prev.length - 1];
+            if (lastMsg.role === "assistant" && !lastMsg.content) {
+              return prev.slice(0, -1);
+            }
+            return prev;
+          });
         }
       } finally {
         setStreamingChatId(null);

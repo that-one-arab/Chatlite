@@ -12,9 +12,10 @@ interface ChatContextValue {
   createChat: (model: string) => string;
   deleteChat: (chatId: string) => void;
   selectChat: (chatId: string | null) => void;
-  updateChatMessages: (chatId: string, messages: Message[]) => void;
+  updateChatMessages: (chatId: string, messages: Message[] | ((prev: Message[]) => Message[])) => void;
   updateChatTitle: (chatId: string, title: string) => void;
   updateSystemPrompt: (chatId: string, systemPrompt: string) => void;
+  updateChatModel: (chatId: string, model: string) => void;
   refreshMetadata: (metadata: ChatMetadataEntry[]) => void;
   loadChatIntoMemory: (chat: Chat) => void;
 }
@@ -99,29 +100,35 @@ export function ChatProvider({ children }: { children: preact.ComponentChildren 
     setCurrentChatId(chatId);
   }, []);
 
-  const updateChatMessages = useCallback((chatId: string, messages: Message[]) => {
+  const updateChatMessages = useCallback((chatId: string, messages: Message[] | ((prev: Message[]) => Message[])) => {
     setLoadedChats((prev) => {
       const chat = prev.get(chatId);
       if (!chat) return prev;
 
+      // Resolve messages (handle functional update)
+      const resolvedMessages = typeof messages === "function" ? messages(chat.messages) : messages;
+
       const newMap = new Map(prev);
       newMap.set(chatId, {
         ...chat,
-        messages,
+        messages: resolvedMessages,
         lastModified: Date.now(),
       });
       return newMap;
     });
 
     // Update metadata message count and lastModified
-    setChatMetadata((prev) =>
-      prev.map((c) =>
+    setChatMetadata((prev) => {
+      const chat = loadedChats.get(chatId);
+      if (!chat) return prev;
+      const resolvedMessages = typeof messages === "function" ? messages(chat.messages) : messages;
+      return prev.map((c) =>
         c.id === chatId
-          ? { ...c, messageCount: messages.length, lastModified: Date.now() }
+          ? { ...c, messageCount: resolvedMessages.length, lastModified: Date.now() }
           : c
-      )
-    );
-  }, []);
+      );
+    });
+  }, [loadedChats]);
 
   const updateChatTitle = useCallback((chatId: string, title: string) => {
     setLoadedChats((prev) => {
@@ -162,6 +169,30 @@ export function ChatProvider({ children }: { children: preact.ComponentChildren 
     });
   }, []);
 
+  const updateChatModel = useCallback((chatId: string, model: string) => {
+    setLoadedChats((prev) => {
+      const chat = prev.get(chatId);
+      if (!chat) return prev;
+
+      const newMap = new Map(prev);
+      newMap.set(chatId, {
+        ...chat,
+        model,
+        lastModified: Date.now(),
+      });
+      return newMap;
+    });
+
+    // Update metadata
+    setChatMetadata((prev) =>
+      prev.map((c) =>
+        c.id === chatId
+          ? { ...c, model, lastModified: Date.now() }
+          : c
+      )
+    );
+  }, []);
+
   const refreshMetadata = useCallback((metadata: ChatMetadataEntry[]) => {
     setChatMetadata(metadata);
   }, []);
@@ -179,6 +210,7 @@ export function ChatProvider({ children }: { children: preact.ComponentChildren 
     updateChatMessages,
     updateChatTitle,
     updateSystemPrompt,
+    updateChatModel,
     refreshMetadata,
     loadChatIntoMemory,
   };

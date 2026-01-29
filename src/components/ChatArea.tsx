@@ -5,7 +5,7 @@ import { useModelContext, useUIContext, useNotificationContext, useModalContext,
 import { useImageAttachment } from "@/hooks/useImageAttachment";
 import { useMessageStreaming } from "@/hooks/useMessageStreaming";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
-import { createUserMessage, createAssistantMessage, canSendMessage, getMessageText } from "@/utils/messageHelpers";
+import { createUserMessage, canSendMessage, getMessageText } from "@/utils/messageHelpers";
 import { Message } from "./Message";
 import { ImageBadge } from "./ImageBadge";
 import { ImagePreviewModal } from "./modals/ImagePreviewModal";
@@ -180,16 +180,13 @@ export function ChatArea({
     if (isDraft && onCreateChat) {
       actualChatId = onCreateChat(chatModel);
       onClearDraft?.();
-      // Create initial messages
+      // Create initial messages - only add user message, assistant will be added by streamResponse
       const userMessage = createUserMessage(messageText, imagesToSend);
-      const assistantMessage = createAssistantMessage();
-      updateChatMessages(actualChatId, [userMessage, assistantMessage]);
+      updateChatMessages(actualChatId, [userMessage]);
     } else {
-      // Update existing chat state
-      const currentMessages = chatMessages;
+      // Update existing chat state using functional update to avoid stale closure
       const userMessage = createUserMessage(messageText, imagesToSend);
-      const assistantMessage = createAssistantMessage();
-      updateChatMessages(actualChatId, [...currentMessages, userMessage, assistantMessage]);
+      updateChatMessages(actualChatId, (prev) => [...prev, userMessage]);
     }
 
     // Update title for first message
@@ -213,13 +210,14 @@ export function ChatArea({
   const handleSaveEdit = useCallback((index: number, newContent: string) => {
     if (!newContent.trim() || isStreaming || isDraft) return;
 
-    // Truncate messages at edit point and update edited message
-    const truncatedMessages = chatMessages.slice(0, index + 1);
-    truncatedMessages[index] = createUserMessage(newContent);
-    const assistantMessage = createAssistantMessage();
-
-    // Update chat state
-    updateChatMessages(chatId, [...truncatedMessages, assistantMessage]);
+    // Update chat state using functional update to avoid stale closure
+    // Only add user message, assistant will be added by streamResponse
+    updateChatMessages(chatId, (prev) => {
+      // Truncate messages at edit point and update edited message
+      const truncatedMessages = prev.slice(0, index + 1);
+      truncatedMessages[index] = createUserMessage(newContent);
+      return truncatedMessages;
+    });
 
     // Regenerate title if editing first message
     if (index === 0) {
@@ -230,9 +228,12 @@ export function ChatArea({
     setEditingMessageIndex(null);
     setEditContent("");
 
-    // Stream new response
+    // Stream new response - need to compute truncated messages for the API
+    const currentMessages = chatMessages;
+    const truncatedMessages = currentMessages.slice(0, index + 1);
+    truncatedMessages[index] = createUserMessage(newContent);
     streamResponse(chatSystemPrompt, truncatedMessages);
-  }, [isStreaming, isDraft, chatMessages, chatId, chatSystemPrompt, chatModel, updateChatMessages, onUpdateChatTitle, streamResponse]);
+  }, [isStreaming, isDraft, chatId, chatModel, chatMessages, updateChatMessages, onUpdateChatTitle, streamResponse]);
 
   return (
     <div style={{

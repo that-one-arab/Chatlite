@@ -29,6 +29,7 @@ function AppContent() {
     currentChat,
     createChat,
     updateChatTitle,
+    updateChatModel,
     selectChat,
     refreshMetadata,
     loadChatIntoMemory,
@@ -421,6 +422,9 @@ The title would be used as the chat title in the sidebar.
           // If in draft mode, update the draft model
           if (draftChat) {
             setDraftChat({ ...draftChat, model });
+          } else if (currentChat) {
+            // Update model for existing chat
+            updateChatModel(currentChat.id, model);
           }
         }}
       />
