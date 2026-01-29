@@ -8,6 +8,7 @@ export const MODAL_NAMES = {
   HELP: "help",
   LLM_SELECTOR: "llmSelector",
   IMAGE_PREVIEW: "imagePreview",
+  DELETE_CONFIRMATION: "deleteConfirmation",
 } as const;
 
 export type ModalName = (typeof MODAL_NAMES)[keyof typeof MODAL_NAMES];

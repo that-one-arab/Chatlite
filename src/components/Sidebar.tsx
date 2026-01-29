@@ -3,6 +3,7 @@ import { useState, useEffect } from "preact/hooks";
 import { chatStorage } from "@/services/chatStorage";
 import { appDataDir } from "@tauri-apps/api/path";
 import { readTextFile } from "@tauri-apps/plugin-fs";
+import { DeleteConfirmationModal } from "./modals/DeleteConfirmationModal";
 
 function SidebarToggleIcon({ isOpen }: { isOpen: boolean }) {
   return (
@@ -36,8 +37,9 @@ export function Sidebar() {
   } = useChatContext();
   const { selectedModel, setSelectedModel } = useModelContext();
   const { draftChat, setDraftChat, clearDraft, isSidebarOpen, toggleSidebar } = useUIContext();
-  const { showModal } = useModalContext();
+  const { showModal, hideModal, isModalOpen } = useModalContext();
   const [storagePath, setStoragePath] = useState("");
+  const [chatToDelete, setChatToDelete] = useState<{ id: string; title: string } | null>(null);
 
   // Load storage path from settings
   useEffect(() => {
@@ -87,15 +89,30 @@ export function Sidebar() {
     }
   };
 
-  const handleDeleteChat = async (chatId: string) => {
+  const handleDeleteClick = (e: MouseEvent, chatId: string, title: string) => {
+    e.stopPropagation();
+    setChatToDelete({ id: chatId, title });
+    showModal(MODAL_NAMES.DELETE_CONFIRMATION);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!chatToDelete) return;
+    
     if (storagePath) {
       try {
-        await chatStorage.deleteChat(storagePath, chatId);
+        await chatStorage.deleteChat(storagePath, chatToDelete.id);
       } catch (error) {
         console.error("Failed to delete chat file:", error);
       }
     }
-    deleteChat(chatId);
+    deleteChat(chatToDelete.id);
+    setChatToDelete(null);
+    hideModal(MODAL_NAMES.DELETE_CONFIRMATION);
+  };
+
+  const handleCancelDelete = () => {
+    setChatToDelete(null);
+    hideModal(MODAL_NAMES.DELETE_CONFIRMATION);
   };
   return (
     <div
@@ -154,10 +171,7 @@ export function Sidebar() {
                     {metadata.title}
                   </span>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteChat(metadata.id);
-                    }}
+                    onClick={(e) => handleDeleteClick(e as unknown as MouseEvent, metadata.id, metadata.title)}
                     class="text-gray-400 hover:text-red-500 transition text-lg leading-none"
                   >
                     ×
@@ -173,13 +187,20 @@ export function Sidebar() {
         <div class="border-t border-gray-200 dark:border-gray-700 p-3">
           <button
             onClick={() => showModal(MODAL_NAMES.SETTINGS)}
-            class="w-full px-3 py-4 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            class="w-full px-3 py-2 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
           >
             <span>⚙️</span>
             <span>Settings</span>
           </button>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isModalOpen(MODAL_NAMES.DELETE_CONFIRMATION)}
+        chatTitle={chatToDelete?.title ?? ""}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 }
