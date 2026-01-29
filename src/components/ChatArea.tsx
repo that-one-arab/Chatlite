@@ -333,7 +333,7 @@ export function ChatArea({
             </div>
           )}
 
-          <div class="flex gap-2 items-end">
+          <div class="flex gap-2 items-center">
             <textarea
               ref={inputRef}
               value={input}

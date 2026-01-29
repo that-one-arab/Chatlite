@@ -173,9 +173,10 @@ export function Sidebar() {
         <div class="border-t border-gray-200 dark:border-gray-700 p-3">
           <button
             onClick={() => showModal(MODAL_NAMES.SETTINGS)}
-            class="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            class="w-full px-3 py-4 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
           >
-            ⚙️ Settings
+            <span>⚙️</span>
+            <span>Settings</span>
           </button>
         </div>
       )}
