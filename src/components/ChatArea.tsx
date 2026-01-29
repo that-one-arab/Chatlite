@@ -75,6 +75,13 @@ export function ChatArea({
     }
   }, [isActive]);
 
+  // Auto-focus input when chat changes (component mounts due to key prop)
+  useEffect(() => {
+    if (isActive) {
+      inputRef.current?.focus();
+    }
+  }, [isActive]);
+
   const handleImagePreview = useCallback((imageUrl: string) => {
     setPreviewImageUrl(imageUrl);
     showModal(MODAL_NAMES.IMAGE_PREVIEW);
