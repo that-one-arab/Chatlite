@@ -38,6 +38,9 @@ function AppContent() {
     zoomLevel,
     setZoomLevel,
     setShowZoomIndicator,
+    draftChat,
+    setDraftChat,
+    clearDraft,
   } = useUIContext();
   const { toasts, showError, removeToast } = useNotificationContext();
   const { showModal, hideModal, hideAllModals, isModalOpen, isAnyModalOpen } = useModalContext();
@@ -327,12 +330,14 @@ The title would be used as the chat title in the sidebar.
   }, [showModal]);
 
   const handleNewChat = useCallback(() => {
-    // If current chat is empty, don't create a new one
-    if (currentChat && currentChat.messages.length === 0) {
+    // If already in draft mode or current chat is empty, don't do anything
+    if (draftChat || (currentChat && currentChat.messages.length === 0)) {
       return;
     }
-    createChat(selectedModel);
-  }, [currentChat, createChat, selectedModel]);
+    // Enter draft mode - show blank chat area without creating a chat
+    setDraftChat({ model: selectedModel });
+    selectChat(null);
+  }, [draftChat, currentChat, selectedModel, setDraftChat, selectChat]);
 
   useHotkeys(
     {
@@ -373,7 +378,18 @@ The title would be used as the chat title in the sidebar.
             onUpdateChatTitle={handleUpdateChatTitle}
           />
         )}
-        {!currentChat && <EmptyState />}
+        {draftChat && (
+          <ChatArea
+            key="draft"
+            draft={draftChat}
+            isActive={true}
+            llmSelectRef={llmSelectRef}
+            onUpdateChatTitle={handleUpdateChatTitle}
+            onCreateChat={createChat}
+            onClearDraft={clearDraft}
+          />
+        )}
+        {!currentChat && !draftChat && <EmptyState />}
       </div>
 
       <SettingsModal
@@ -399,7 +415,12 @@ The title would be used as the chat title in the sidebar.
       <LlmSelectorModal
         isOpen={isModalOpen(MODAL_NAMES.LLM_SELECTOR)}
         onClose={() => hideModal(MODAL_NAMES.LLM_SELECTOR)}
-        onSelect={() => {}}
+        onSelect={(model) => {
+          // If in draft mode, update the draft model
+          if (draftChat) {
+            setDraftChat({ ...draftChat, model });
+          }
+        }}
       />
 
       <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">

@@ -1,4 +1,4 @@
-import { useChatContext, useModelContext, useModalContext, MODAL_NAMES } from "@/contexts";
+import { useChatContext, useModelContext, useModalContext, useUIContext, MODAL_NAMES } from "@/contexts";
 import { useState, useEffect } from "preact/hooks";
 import { chatStorage } from "@/services/chatStorage";
 import { appDataDir } from "@tauri-apps/api/path";
@@ -9,13 +9,13 @@ export function Sidebar() {
     chatMetadata,
     currentChatId,
     currentChat,
-    createChat,
     selectChat,
     deleteChat,
     loadChatIntoMemory,
     loadedChats,
   } = useChatContext();
   const { selectedModel, setSelectedModel } = useModelContext();
+  const { draftChat, setDraftChat } = useUIContext();
   const { showModal } = useModalContext();
   const [storagePath, setStoragePath] = useState("");
 
@@ -36,10 +36,13 @@ export function Sidebar() {
   }, []);
 
   const handleCreateChat = () => {
-    if (currentChat && currentChat.messages.length === 0) {
+    // If already in draft mode or current chat is empty, don't do anything
+    if (draftChat || (currentChat && currentChat.messages.length === 0)) {
       return;
     }
-    createChat(selectedModel);
+    // Enter draft mode - show blank chat area without creating a chat
+    setDraftChat({ model: selectedModel });
+    selectChat(null);
   };
 
   const handleSelectChat = async (chatId: string) => {
@@ -75,7 +78,8 @@ export function Sidebar() {
       <div class="p-3 border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={handleCreateChat}
-          class="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition text-sm font-medium"
+          disabled={!!draftChat || (!!currentChat && currentChat.messages.length === 0)}
+          class="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           + New Chat
         </button>

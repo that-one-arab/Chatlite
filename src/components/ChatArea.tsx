@@ -10,18 +10,29 @@ import { Message } from "./Message";
 import { ImageBadge } from "./ImageBadge";
 import { ImagePreviewModal } from "./modals/ImagePreviewModal";
 
+interface DraftChat {
+  model: string;
+  systemPrompt?: string;
+}
+
 interface ChatAreaProps {
-  chat: Chat;
+  chat?: Chat;
+  draft?: DraftChat;
   isActive: boolean;
   llmSelectRef?: RefObject<HTMLButtonElement>;
   onUpdateChatTitle: (chatId: string, firstMessage: string, model: string) => void;
+  onCreateChat?: (model: string) => string;
+  onClearDraft?: () => void;
 }
 
 export function ChatArea({
   chat,
+  draft,
   isActive,
   llmSelectRef,
   onUpdateChatTitle,
+  onCreateChat,
+  onClearDraft,
 }: ChatAreaProps) {
   const { updateChatMessages } = useChatContext();
   const { selectedModel } = useModelContext();
@@ -47,7 +58,13 @@ export function ChatArea({
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasScrolledInitially = useRef(false);
 
-  const isStreaming = streamingChatId === chat.id;
+  // Determine if this is a draft chat
+  const isDraft = !!draft;
+  const chatId = chat?.id ?? "draft";
+  const chatModel = chat?.model ?? draft?.model ?? selectedModel;
+  const chatSystemPrompt = chat?.systemPrompt ?? draft?.systemPrompt;
+  const chatMessages = chat?.messages ?? [];
+  const isStreaming = streamingChatId === chatId;
 
   // Auto-scroll hook
   const { handleWheel, handleScroll, triggerAutoScroll } = useAutoScroll({
@@ -60,12 +77,12 @@ export function ChatArea({
   useEffect(() => {
     if (isStreaming && isActive) {
       // Get the last message content to track changes
-      const lastMessage = chat.messages[chat.messages.length - 1];
+      const lastMessage = chatMessages[chatMessages.length - 1];
       if (lastMessage?.role === "assistant") {
         triggerAutoScroll();
       }
     }
-  }, [chat.messages, isStreaming, isActive, triggerAutoScroll]);
+  }, [chatMessages, isStreaming, isActive, triggerAutoScroll]);
 
   // Initial scroll to bottom when first opened
   useEffect(() => {
@@ -112,21 +129,19 @@ export function ChatArea({
   });
 
   const { streamResponse, stopGeneration } = useMessageStreaming({
-    chatId: chat.id,
-    selectedModel,
+    chatId,
+    selectedModel: chatModel,
     abortControllerRef,
     setStreamingChatId,
     updateChatMessages,
     showError,
   });
 
-
-
   // Reset edit state when chat changes
   useEffect(() => {
     setEditingMessageIndex(null);
     setEditContent("");
-  }, [chat.id]);
+  }, [chatId]);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -159,45 +174,56 @@ export function ChatArea({
     // Prepare message
     const messageText = getMessageText(input, attachedImages.length > 0);
     const imagesToSend = [...attachedImages];
-    const currentMessages = chat.messages;
 
-    const userMessage = createUserMessage(messageText, imagesToSend);
-    const assistantMessage = createAssistantMessage();
-
-    // Update chat state
-    updateChatMessages(chat.id, [...currentMessages, userMessage, assistantMessage]);
+    // If in draft mode, create the chat first
+    let actualChatId = chatId;
+    if (isDraft && onCreateChat) {
+      actualChatId = onCreateChat(chatModel);
+      onClearDraft?.();
+      // Create initial messages
+      const userMessage = createUserMessage(messageText, imagesToSend);
+      const assistantMessage = createAssistantMessage();
+      updateChatMessages(actualChatId, [userMessage, assistantMessage]);
+    } else {
+      // Update existing chat state
+      const currentMessages = chatMessages;
+      const userMessage = createUserMessage(messageText, imagesToSend);
+      const assistantMessage = createAssistantMessage();
+      updateChatMessages(actualChatId, [...currentMessages, userMessage, assistantMessage]);
+    }
 
     // Update title for first message
-    if (currentMessages.length === 0) {
-      onUpdateChatTitle(chat.id, messageText, selectedModel);
+    if (chatMessages.length === 0 || isDraft) {
+      onUpdateChatTitle(actualChatId, messageText, chatModel);
     }
 
     // Clear input
     setInput("");
     clearImages();
 
-    // Stream response
+    // Stream response - pass actualChatId for drafts to ensure updates go to correct chat
     await streamResponse(
-      chat.systemPrompt,
-      [...currentMessages, userMessage],
-      imagesToSend
+      chatSystemPrompt,
+      [{ role: "user" as const, content: messageText, timestamp: Date.now() }],
+      imagesToSend,
+      isDraft ? actualChatId : undefined
     );
-  }, [input, attachedImages, isStreaming, chat.messages, chat.id, chat.systemPrompt, updateChatMessages, onUpdateChatTitle, selectedModel, clearImages, streamResponse]);
+  }, [input, attachedImages, isStreaming, chatMessages, chatId, chatSystemPrompt, chatModel, isDraft, onCreateChat, onClearDraft, updateChatMessages, onUpdateChatTitle, clearImages, streamResponse]);
 
   const handleSaveEdit = useCallback((index: number, newContent: string) => {
-    if (!newContent.trim() || isStreaming) return;
+    if (!newContent.trim() || isStreaming || isDraft) return;
 
     // Truncate messages at edit point and update edited message
-    const truncatedMessages = chat.messages.slice(0, index + 1);
+    const truncatedMessages = chatMessages.slice(0, index + 1);
     truncatedMessages[index] = createUserMessage(newContent);
     const assistantMessage = createAssistantMessage();
 
     // Update chat state
-    updateChatMessages(chat.id, [...truncatedMessages, assistantMessage]);
+    updateChatMessages(chatId, [...truncatedMessages, assistantMessage]);
 
     // Regenerate title if editing first message
     if (index === 0) {
-      onUpdateChatTitle(chat.id, newContent, selectedModel);
+      onUpdateChatTitle(chatId, newContent, chatModel);
     }
 
     // Clear edit state
@@ -205,8 +231,8 @@ export function ChatArea({
     setEditContent("");
 
     // Stream new response
-    streamResponse(chat.systemPrompt, truncatedMessages);
-  }, [isStreaming, chat.messages, chat.id, chat.systemPrompt, updateChatMessages, onUpdateChatTitle, selectedModel, streamResponse]);
+    streamResponse(chatSystemPrompt, truncatedMessages);
+  }, [isStreaming, isDraft, chatMessages, chatId, chatSystemPrompt, chatModel, updateChatMessages, onUpdateChatTitle, streamResponse]);
 
   return (
     <div style={{
@@ -227,7 +253,7 @@ export function ChatArea({
             onClick={() => showModal(MODAL_NAMES.LLM_SELECTOR)}
             class="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           >
-            {selectedModel}
+            {chatModel}
           </button>
         </div>
 
@@ -242,7 +268,8 @@ export function ChatArea({
           </button>
           <button
             onClick={() => showModal(MODAL_NAMES.CHAT_SETTINGS)}
-            class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            disabled={isDraft}
+            class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
             aria-label="Conversation settings"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,7 +300,7 @@ export function ChatArea({
       {/* Messages */}
       <div ref={messagesContainerRef} onWheel={handleWheel} onScroll={handleScroll} class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto space-y-4">
-          {chat.messages.map((msg, idx) => (
+          {chatMessages.map((msg, idx) => (
             <Message
               key={idx}
               message={msg}
@@ -282,7 +309,7 @@ export function ChatArea({
               editContent={editContent}
               canEdit={msg.role === "user" && !isStreaming}
               isStreaming={isStreaming}
-              isLastMessage={idx === chat.messages.length - 1}
+              isLastMessage={idx === chatMessages.length - 1}
               onStartEdit={handleStartEdit}
               onCancelEdit={handleCancelEdit}
               onSaveEdit={handleSaveEdit}

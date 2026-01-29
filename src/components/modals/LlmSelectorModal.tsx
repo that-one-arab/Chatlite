@@ -5,7 +5,7 @@ import { Modal } from "./Modal";
 interface LlmSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect?: () => void;
+  onSelect?: (model: string) => void;
 }
 
 export function LlmSelectorModal({ isOpen, onClose, onSelect }: LlmSelectorModalProps) {
@@ -56,7 +56,7 @@ export function LlmSelectorModal({ isOpen, onClose, onSelect }: LlmSelectorModal
 
   const handleSelectModel = (model: string) => {
     setSelectedModel(model);
-    onSelect?.();
+    onSelect?.(model);
     onClose();
   };
 

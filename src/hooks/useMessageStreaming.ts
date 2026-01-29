@@ -57,15 +57,18 @@ export function useMessageStreaming({
     async (
       systemPrompt: string | undefined,
       conversationHistory: Message[],
-      imagesToSend?: AttachedImage[]
+      imagesToSend?: AttachedImage[],
+      actualChatId?: string
     ) => {
-      setStreamingChatId(chatId);
+      // Use actualChatId for drafts (when chat was just created), otherwise use captured chatId
+      const targetChatId = actualChatId ?? chatId;
+      setStreamingChatId(targetChatId);
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
       // Create local copy of messages to track state during streaming
-      const streamingMessages = [
+      const streamingMessages: Message[] = [
         ...conversationHistory,
         { role: "assistant" as const, content: "", timestamp: Date.now() },
       ];
@@ -130,7 +133,7 @@ export function useMessageStreaming({
                   if (thinking) {
                     lastMsg.thinking = (lastMsg.thinking || "") + thinking;
                   }
-                  updateChatMessages(chatId, streamingMessages);
+                  updateChatMessages(targetChatId, streamingMessages);
                 }
               }
             } catch (e) {
@@ -157,7 +160,7 @@ export function useMessageStreaming({
           if (lastMsg.role === "assistant" && !lastMsg.content) {
             streamingMessages.pop();
           }
-          updateChatMessages(chatId, streamingMessages);
+          updateChatMessages(targetChatId, streamingMessages);
         }
       } finally {
         setStreamingChatId(null);
