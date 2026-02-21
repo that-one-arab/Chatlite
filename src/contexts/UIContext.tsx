@@ -12,6 +12,7 @@ interface UIContextValue {
   showZoomIndicator: boolean;
   draftChat: DraftChat | null;
   isSidebarOpen: boolean;
+  theme: "light" | "dark" | "blue";
   setStreamingChatId: (chatId: string | null) => void;
   setZoomLevel: (level: number) => void;
   setShowZoomIndicator: (show: boolean) => void;
@@ -19,6 +20,7 @@ interface UIContextValue {
   clearDraft: () => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setTheme: (theme: "light" | "dark" | "blue") => void;
 }
 
 const UIContext = createContext<UIContextValue | null>(null);
@@ -29,6 +31,7 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
   const [draftChat, setDraftChat] = useState<DraftChat | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [theme, setTheme] = useState<"light" | "dark" | "blue">("dark");
 
   const clearDraft = () => setDraftChat(null);
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
@@ -40,6 +43,7 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     showZoomIndicator,
     draftChat,
     isSidebarOpen,
+    theme,
     setStreamingChatId,
     setZoomLevel,
     setShowZoomIndicator,
@@ -47,6 +51,7 @@ export function UIProvider({ children }: { children: preact.ComponentChildren })
     clearDraft,
     toggleSidebar,
     setSidebarOpen,
+    setTheme,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;

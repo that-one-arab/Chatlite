@@ -25,6 +25,7 @@ interface ChatAreaProps {
   onClearDraft?: () => void;
 }
 
+
 export function ChatArea({
   chat,
   draft,
@@ -57,6 +58,7 @@ export function ChatArea({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasScrolledInitially = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Determine if this is a draft chat
   const isDraft = !!draft;
@@ -76,7 +78,6 @@ export function ChatArea({
   // Trigger auto-scroll when streaming content changes
   useEffect(() => {
     if (isStreaming && isActive) {
-      // Get the last message content to track changes
       const lastMessage = chatMessages[chatMessages.length - 1];
       if (lastMessage?.role === "assistant") {
         triggerAutoScroll();
@@ -127,6 +128,30 @@ export function ChatArea({
     attachImage,
     showError,
   });
+
+  const handleFileSelect = useCallback((e: Event) => {
+    const files = (e.currentTarget as HTMLInputElement).files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      if (file.size > 5 * 1024 * 1024) {
+        showError("Image too large. Maximum size is 5MB");
+        continue;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        attachImage({
+          id: Date.now().toString() + Math.random(),
+          base64: dataUrl.substring(dataUrl.indexOf(",") + 1),
+          dataUrl,
+          name: `Image ${attachedImages.length + 1}`,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+    (e.currentTarget as HTMLInputElement).value = "";
+  }, [attachedImages.length, attachImage, showError]);
 
   const { streamResponse, stopGeneration } = useMessageStreaming({
     chatId,
@@ -237,139 +262,232 @@ export function ChatArea({
 
   return (
     <div style={{
-      display: isActive ? 'flex' : 'none',
-      flexDirection: 'column',
-      position: isActive ? 'relative' : 'absolute',
-      width: '100%',
-      height: '100%',
+      display: isActive ? "flex" : "none",
+      flexDirection: "column",
+      position: isActive ? "relative" : "absolute",
+      width: "100%",
+      height: "100%",
       top: 0,
       left: 0,
     }}>
-      {/* Header */}
-      <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
-        {/* LLM Selector Button - Centered */}
-        <div class="flex-1 flex justify-center">
-          <button
-            ref={llmSelectRef}
-            onClick={() => showModal(MODAL_NAMES.LLM_SELECTOR)}
-            class="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          >
-            {chatModel}
-          </button>
-        </div>
+      {isDraft ? (
+        <>
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={handleFileSelect}
+          />
 
-        {/* Action Buttons - Right Aligned */}
-        <div class="flex items-center gap-1">
-          <button
-            onClick={() => showModal(MODAL_NAMES.HELP)}
-            class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-            title="Keyboard shortcuts"
-          >
-            <span class="text-base font-medium">?</span>
-          </button>
-          <button
-            onClick={() => showModal(MODAL_NAMES.CHAT_SETTINGS)}
-            disabled={isDraft}
-            class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Conversation settings"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* Zoom Level Indicator */}
-        {showZoomIndicator && (
-          <div class="absolute right-8 top-16 bg-gray-800 dark:bg-gray-700 text-white px-3 py-1.5 rounded-lg shadow-lg text-sm font-medium animate-fade-in-out">
-            {Math.round(zoomLevel * 100)}%
+          {/* Centered prompt text */}
+          <div class="flex-1 flex items-center justify-center">
+            <p class="text-[var(--text-3)] text-lg">Type a message to start chatting</p>
           </div>
-        )}
-      </div>
 
-      {/* Messages */}
-      <div ref={messagesContainerRef} onWheel={handleWheel} onScroll={handleScroll} class="flex-1 overflow-y-auto p-4">
-        <div class="max-w-3xl mx-auto space-y-4">
-          {chatMessages.map((msg, idx) => (
-            <Message
-              key={idx}
-              message={msg}
-              index={idx}
-              isEditing={editingMessageIndex === idx}
-              editContent={editContent}
-              canEdit={msg.role === "user" && !isStreaming}
-              isStreaming={isStreaming}
-              isLastMessage={idx === chatMessages.length - 1}
-              onStartEdit={handleStartEdit}
-              onCancelEdit={handleCancelEdit}
-              onSaveEdit={handleSaveEdit}
-              onEditContentChange={setEditContent}
-              onImageClick={handleImagePreview}
-            />
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
+          {/* Floating centered input */}
+          <div class="px-10 pb-12">
+            <div class="max-w-2xl mx-auto">
+              {attachedImages.length > 0 && (
+                <div class="flex flex-wrap gap-2 mb-2">
+                  {attachedImages.map((img) => (
+                    <ImageBadge
+                      key={img.id}
+                      dataUrl={img.dataUrl}
+                      name={img.name}
+                      onRemove={() => removeImage(img.id)}
+                      onPreview={() => handleImagePreview(img.dataUrl)}
+                    />
+                  ))}
+                </div>
+              )}
 
-      {/* Input Area */}
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
-        <div class="max-w-3xl mx-auto">
-          {/* Image Badges */}
-          {attachedImages.length > 0 && (
-            <div class="flex flex-wrap gap-2 mb-3">
-              {attachedImages.map((img) => (
-                <ImageBadge key={img.id} dataUrl={img.dataUrl} name={img.name} onRemove={() => removeImage(img.id)} onPreview={() => handleImagePreview(img.dataUrl)} />
-              ))}
+              <div class="bg-[var(--bg-input)] rounded-2xl border border-[var(--border-input)] overflow-hidden">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onInput={(e) => setInput(e.currentTarget.value)}
+                  onPaste={handlePaste}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Send a message"
+                  rows={1}
+                  class="w-full px-4 pt-4 pb-2 bg-transparent text-[var(--text-1)] placeholder-[var(--text-3)] focus:outline-none text-sm resize-none"
+                  style="min-height: 52px; overflow-y: hidden;"
+                />
+                <div class="flex items-center gap-2 px-3 pb-3">
+                  {/* Attach image button */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--bg-btn)] text-[var(--text-2)] hover:bg-[var(--bg-btn-hover)] hover:text-[var(--text-1)] transition"
+                    title="Attach image"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                  <div class="flex-1" />
+                  {/* Model selector */}
+                  <button
+                    ref={llmSelectRef}
+                    onClick={() => showModal(MODAL_NAMES.LLM_SELECTOR)}
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-btn)] text-[var(--text-1)] text-sm hover:bg-[var(--bg-btn-hover)] transition"
+                  >
+                    <span class="truncate max-w-[160px]">{chatModel}</span>
+                    <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {/* Send button */}
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim() && attachedImages.length === 0}
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--text-1)] text-[var(--bg-app)] disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition"
+                    title="Send"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Header */}
+          <div class="flex items-center justify-between px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)] relative">
+            {/* LLM Selector Button - Centered */}
+            <div class="flex-1 flex justify-center">
+              <button
+                ref={llmSelectRef}
+                onClick={() => showModal(MODAL_NAMES.LLM_SELECTOR)}
+                class="px-3 py-1.5 text-sm bg-[var(--bg-btn)] rounded-lg text-[var(--text-1)] hover:bg-[var(--bg-btn-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--border-ring)] transition"
+              >
+                {chatModel}
+              </button>
+            </div>
 
-          <div class="flex gap-2 items-center">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onInput={(e) => setInput(e.currentTarget.value)}
-              onPaste={handlePaste}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="Message..."
-              rows={1}
-              class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-              style="min-height: 44px; overflow-y: hidden;"
-            />
-            {isStreaming ? (
+            {/* Action Buttons - Right Aligned */}
+            <div class="flex items-center gap-1">
               <button
-                onClick={stopGeneration}
-                class="px-5 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition text-sm font-medium flex-shrink-0"
+                onClick={() => showModal(MODAL_NAMES.HELP)}
+                class="p-2 text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--bg-item-hover)] rounded-lg transition"
+                title="Keyboard shortcuts"
               >
-                Stop
+                <span class="text-base font-medium">?</span>
               </button>
-            ) : (
               <button
-                onClick={sendMessage}
-                disabled={!input.trim() && attachedImages.length === 0}
-                class="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex-shrink-0"
+                onClick={() => showModal(MODAL_NAMES.CHAT_SETTINGS)}
+                class="p-2 text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--bg-item-hover)] rounded-lg transition"
+                aria-label="Conversation settings"
               >
-                Send
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
               </button>
+            </div>
+
+            {/* Zoom Level Indicator */}
+            {showZoomIndicator && (
+              <div class="absolute right-8 top-16 bg-[var(--bg-btn)] text-[var(--text-1)] px-3 py-1.5 rounded-lg shadow-lg text-sm font-medium animate-fade-in-out">
+                {Math.round(zoomLevel * 100)}%
+              </div>
             )}
           </div>
-        </div>
-      </div>
+
+          {/* Messages */}
+          <div ref={messagesContainerRef} onWheel={handleWheel} onScroll={handleScroll} class="flex-1 overflow-y-auto p-4">
+            <div class="max-w-3xl mx-auto space-y-4">
+              {chatMessages.map((msg, idx) => (
+                <Message
+                  key={idx}
+                  message={msg}
+                  index={idx}
+                  isEditing={editingMessageIndex === idx}
+                  editContent={editContent}
+                  canEdit={msg.role === "user" && !isStreaming}
+                  isStreaming={isStreaming}
+                  isLastMessage={idx === chatMessages.length - 1}
+                  onStartEdit={handleStartEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onEditContentChange={setEditContent}
+                  onImageClick={handleImagePreview}
+                />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div class="p-4 bg-[var(--bg-app)]">
+            <div class="max-w-3xl mx-auto">
+              {/* Image Badges */}
+              {attachedImages.length > 0 && (
+                <div class="flex flex-wrap gap-2 mb-3">
+                  {attachedImages.map((img) => (
+                    <ImageBadge key={img.id} dataUrl={img.dataUrl} name={img.name} onRemove={() => removeImage(img.id)} onPreview={() => handleImagePreview(img.dataUrl)} />
+                  ))}
+                </div>
+              )}
+
+              <div class="flex gap-2 items-center">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onInput={(e) => setInput(e.currentTarget.value)}
+                  onPaste={handlePaste}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Send a message"
+                  rows={1}
+                  class="flex-1 px-4 py-3 rounded-2xl bg-[var(--bg-input)] text-[var(--text-1)] placeholder-[var(--text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--border-ring)] text-sm resize-none"
+                  style="min-height: 44px; overflow-y: hidden;"
+                />
+                {isStreaming ? (
+                  <button
+                    onClick={stopGeneration}
+                    class="px-5 py-3 bg-[var(--bg-btn)] text-[var(--text-1)] rounded-2xl hover:bg-[var(--bg-btn-hover)] transition text-sm font-medium flex-shrink-0"
+                  >
+                    Stop
+                  </button>
+                ) : (
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim() && attachedImages.length === 0}
+                    class="px-5 py-3 bg-[var(--bg-btn)] text-[var(--text-1)] rounded-2xl hover:bg-[var(--bg-btn-hover)] transition disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium flex-shrink-0"
+                  >
+                    Send
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Image Preview Modal */}
       <ImagePreviewModal imageUrl={previewImageUrl} onClose={handleCloseImagePreview} />

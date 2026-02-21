@@ -1,5 +1,74 @@
 @import "tailwindcss";
 
+/* ── Light theme (default) ─────────────────────────────── */
+:root {
+  --bg-app:           #f9fafb;
+  --bg-surface:       #ffffff;
+  --bg-btn:           #f3f4f6;
+  --bg-btn-hover:     #e5e7eb;
+  --bg-input:         #ffffff;
+  --bg-item-hover:    #f3f4f6;
+  --bg-item-selected: #e5e7eb;
+  --border:           #e5e7eb;
+  --border-input:     #d1d5db;
+  --border-ring:      #9ca3af;
+  --text-1:           #111827;
+  --text-2:           #6b7280;
+  --text-3:           #9ca3af;
+  --msg-user-bg:      #2563eb;
+  --msg-user-text:    #ffffff;
+  --msg-ai-bg:        #f3f4f6;
+  --code-block:       #1f2937;
+  --code-inline:      #e5e7eb;
+  --modal-bg:         #ffffff;
+}
+
+/* ── Blue (original) theme ─────────────────────────────── */
+.theme-blue {
+  --bg-app:           #111827;
+  --bg-surface:       #1f2937;
+  --bg-btn:           #374151;
+  --bg-btn-hover:     #4b5563;
+  --bg-input:         #374151;
+  --bg-item-hover:    #374151;
+  --bg-item-selected: #374151;
+  --border:           #374151;
+  --border-input:     #4b5563;
+  --border-ring:      #3b82f6;
+  --text-1:           #e5e7eb;
+  --text-2:           #9ca3af;
+  --text-3:           #6b7280;
+  --msg-user-bg:      #2563eb;
+  --msg-user-text:    #ffffff;
+  --msg-ai-bg:        #1f2937;
+  --code-block:       #030712;
+  --code-inline:      #374151;
+  --modal-bg:         #1f2937;
+}
+
+/* ── Dark theme ────────────────────────────────────────── */
+.theme-dark {
+  --bg-app:           #1c1c1c;
+  --bg-surface:       #1c1c1c;
+  --bg-btn:           #252525;
+  --bg-btn-hover:     #2f2f2f;
+  --bg-input:         #252525;
+  --bg-item-hover:    #252525;
+  --bg-item-selected: #252525;
+  --border:           #2f2f2f;
+  --border-input:     #3a3a3a;
+  --border-ring:      #4a4a4a;
+  --text-1:           #e5e5e5;
+  --text-2:           #888888;
+  --text-3:           #666666;
+  --msg-user-bg:      #2d2d2d;
+  --msg-user-text:    #e5e5e5;
+  --msg-ai-bg:        #232323;
+  --code-block:       #141414;
+  --code-inline:      #2f2f2f;
+  --modal-bg:         #252525;
+}
+
 @keyframes slide-in {
   from {
     transform: translateX(100%);

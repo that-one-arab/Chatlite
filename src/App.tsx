@@ -43,6 +43,8 @@ function AppContent() {
     setDraftChat,
     clearDraft,
     toggleSidebar,
+    theme,
+    setTheme,
   } = useUIContext();
   const { toasts, showError, removeToast } = useNotificationContext();
   const { showModal, hideModal, hideAllModals, isModalOpen, isAnyModalOpen } = useModalContext();
@@ -84,6 +86,7 @@ function AppContent() {
       setCustomPath(settings.storagePath);
       setSelectedModel(settings.lastModel);
       setZoomLevel(settings.zoomLevel ?? 1.0);
+      setTheme(settings.theme ?? "dark");
 
       // Apply zoom level
       await applyZoom(settings.zoomLevel ?? 1.0);
@@ -133,7 +136,7 @@ function AppContent() {
   };
 
 
-  const saveSettings = async (model: string, path: string, zoom?: number) => {
+  const saveSettings = async (model: string, path: string, zoom?: number, themeVal?: "light" | "dark" | "blue") => {
     try {
       const appData = await appDataDir();
       const settingsPath = `${appData}/settings.json`;
@@ -141,6 +144,7 @@ function AppContent() {
         storagePath: path,
         lastModel: model,
         zoomLevel: zoom ?? zoomLevel,
+        theme: themeVal ?? theme,
       };
       await writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
     } catch (error) {
@@ -177,6 +181,11 @@ function AppContent() {
   const zoomIn = () => changeZoom(Math.round((zoomLevel + 0.1) * 10) / 10);
   const zoomOut = () => changeZoom(Math.round((zoomLevel - 0.1) * 10) / 10);
   const resetZoom = () => changeZoom(1.0);
+
+  const handleThemeChange = useCallback(async (newTheme: "light" | "dark" | "blue") => {
+    setTheme(newTheme);
+    await saveSettings(selectedModel, storagePath, zoomLevel, newTheme);
+  }, [selectedModel, storagePath, zoomLevel]);
 
   // Cleanup zoom indicator timeout
   useEffect(() => {
@@ -368,7 +377,7 @@ The title would be used as the chat title in the sidebar.
   );
 
   return (
-    <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div class={`flex h-screen bg-[var(--bg-app)] ${theme === "dark" ? "theme-dark" : theme === "blue" ? "theme-blue" : ""}`}>
       <Sidebar />
 
       <div class="flex-1 flex flex-col relative">
@@ -400,10 +409,12 @@ The title would be used as the chat title in the sidebar.
         storagePath={storagePath}
         customPath={customPath}
         zoomLevel={zoomLevel}
+        theme={theme}
         onCustomPathChange={setCustomPath}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onZoomReset={resetZoom}
+        onThemeChange={handleThemeChange}
         onApply={applyStoragePath}
         onClose={() => hideModal(MODAL_NAMES.SETTINGS)}
       />

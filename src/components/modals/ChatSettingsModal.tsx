@@ -35,17 +35,17 @@ export function ChatSettingsModal() {
       width="w-[32rem]"
     >
       <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-[var(--text-1)] mb-2">
           System Prompt
         </label>
         <textarea
           value={draft}
           onInput={(e) => setDraft(e.currentTarget.value)}
           rows={6}
-          class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-3 py-2 text-sm bg-[var(--bg-app)] border border-[var(--border-input)] rounded-lg text-[var(--text-1)] placeholder-[var(--text-3)] resize-none focus:outline-none focus:ring-1 focus:ring-[var(--border-ring)]"
           placeholder="You are a helpful assistant..."
         />
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p class="text-xs text-[var(--text-2)] mt-1">
           Instructions that guide the model's behavior for this conversation.
         </p>
       </div>
@@ -53,7 +53,7 @@ export function ChatSettingsModal() {
       <div class="flex gap-2">
         <button
           onClick={handleClose}
-          class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm"
+          class="flex-1 px-4 py-2 bg-[var(--bg-btn)] text-[var(--text-1)] rounded-lg hover:bg-[var(--bg-btn-hover)] transition text-sm"
         >
           Cancel
         </button>

@@ -2,6 +2,7 @@ import { useState, memo } from "preact/compat";
 import type { ComponentChildren } from "preact";
 import Markdown from "markdown-to-jsx";
 import type { Message as MessageType } from "@/types";
+import { useUIContext } from "@/contexts";
 
 interface MessageProps {
   message: MessageType;
@@ -49,6 +50,7 @@ export const Message = memo(function Message({
   onEditContentChange,
   onImageClick,
 }: MessageProps) {
+  const { theme } = useUIContext();
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
@@ -66,10 +68,10 @@ export const Message = memo(function Message({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`group relative ${isEditing ? "w-full" : "max-w-[80%]"} px-4 py-3 rounded-2xl ${
+        className={`group relative ${isEditing ? "w-full" : isUser ? "max-w-[80%]" : "max-w-[85%]"} px-4 py-3 rounded-2xl ${
           isUser
-            ? "bg-blue-600 text-white"
-            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
+            ? "bg-[var(--msg-user-bg)] text-[var(--msg-user-text)]"
+            : "bg-[var(--msg-ai-bg)] text-[var(--text-1)]"
         }`}
         onMouseEnter={() => setShowTimestamp(true)}
         onMouseLeave={() => setShowTimestamp(false)}
@@ -78,7 +80,7 @@ export const Message = memo(function Message({
         {/* Position below for first message to avoid being cropped by container top edge */}
         {showTimestamp && formattedTimestamp && (
           <div
-            className={`absolute ${index === 0 ? "-bottom-8" : "-top-8"} ${isUser ? "right-0" : "left-0"} px-2 py-1 text-xs rounded bg-gray-800 dark:bg-gray-700 text-white whitespace-nowrap z-10`}
+            className={`absolute ${index === 0 ? "-bottom-8" : "-top-8"} ${isUser ? "right-0" : "left-0"} px-2 py-1 text-xs rounded bg-[var(--bg-btn)] text-[var(--text-1)] whitespace-nowrap z-10`}
           >
             {formattedTimestamp}
           </div>
@@ -87,7 +89,7 @@ export const Message = memo(function Message({
         {canEdit && !isEditing && (
           <button
             onClick={() => onStartEdit(index, message.content)}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded-full hover:bg-blue-700 cursor-pointer"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-btn-hover)] cursor-pointer"
             aria-label="Edit message"
           >
             🖊️
@@ -98,7 +100,7 @@ export const Message = memo(function Message({
         {!isUser && (
           <button
             onClick={handleCopy}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-gray-500 dark:text-gray-400"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-btn-hover)] cursor-pointer text-[var(--text-2)]"
             aria-label="Copy message"
           >
             {copied ? (
@@ -118,7 +120,7 @@ export const Message = memo(function Message({
           <div className="mb-2">
             <button
               onClick={() => setThinkingExpanded(!thinkingExpanded)}
-              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors cursor-pointer"
             >
               <svg
                 className={`w-3 h-3 transition-transform ${thinkingExpanded ? "rotate-90" : ""}`}
@@ -131,14 +133,14 @@ export const Message = memo(function Message({
               <span className="font-medium">Thinking</span>
               {isStreaming && isLastMessage && !message.content && (
                 <span className="flex gap-0.5 ml-1">
-                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></span>
+                  <span className="w-1 h-1 bg-[var(--text-2)] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                  <span className="w-1 h-1 bg-[var(--text-2)] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                  <span className="w-1 h-1 bg-[var(--text-2)] rounded-full animate-bounce"></span>
                 </span>
               )}
             </button>
             {thinkingExpanded && (
-              <div className="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+              <div className="mt-2 pl-3 border-l-2 border-[var(--border-input)] text-xs text-[var(--text-2)] whitespace-pre-wrap">
                 {message.thinking}
               </div>
             )}
@@ -162,12 +164,12 @@ export const Message = memo(function Message({
 
         {/* Display mode */}
         {!isEditing && (
-          <div className={`break-words text-sm ${isUser ? "whitespace-pre-wrap" : "prose prose-sm dark:prose-invert max-w-none"}`}>
+          <div className={`break-words text-sm ${isUser ? "whitespace-pre-wrap" : `prose prose-sm ${theme !== "light" ? "prose-invert" : ""} max-w-none`}`}>
             {isThinking && !hasThinking ? (
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></span>
+                <span className="w-2 h-2 bg-[var(--text-2)] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-2 h-2 bg-[var(--text-2)] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-2 h-2 bg-[var(--text-2)] rounded-full animate-bounce"></span>
               </div>
             ) : isUser ? (
               message.content
@@ -178,7 +180,7 @@ export const Message = memo(function Message({
                   overrides: {
                     pre: {
                       props: {
-                        className: "bg-gray-900 dark:bg-gray-950 text-gray-100 p-3 rounded-lg overflow-x-auto my-2",
+                        className: "bg-[var(--code-block)] text-gray-100 p-3 rounded-lg overflow-x-auto my-2",
                       },
                     },
                     code: {
@@ -186,7 +188,7 @@ export const Message = memo(function Message({
                         const isInline = !className;
                         return isInline ? (
                           <code
-                            className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm"
+                            className="bg-[var(--code-inline)] px-1.5 py-0.5 rounded text-sm"
                             {...props}
                           >
                             {children}
@@ -229,19 +231,19 @@ export const Message = memo(function Message({
               }}
               autoFocus
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+              className="w-full px-3 py-2 border border-[var(--border-input)] rounded-lg bg-[var(--bg-input)] text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--border-ring)] text-sm resize-none"
             />
             <div className="flex justify-end gap-2 mt-2">
               <button
                 onClick={onCancelEdit}
-                className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                className="px-3 py-1.5 text-sm bg-[var(--bg-btn)] text-[var(--text-1)] rounded-lg hover:bg-[var(--bg-btn-hover)] transition"
               >
                 Cancel
               </button>
               <button
                 onClick={() => onSaveEdit(index, editContent)}
                 disabled={!editContent.trim()}
-                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-sm bg-[var(--bg-btn-hover)] text-[var(--text-1)] rounded-lg hover:bg-[var(--border-input)] transition disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Save
               </button>

@@ -105,14 +105,14 @@ export function LlmSelectorModal({ isOpen, onClose, onSelect }: LlmSelectorModal
           onInput={(e) => setSearchQuery(e.currentTarget.value)}
           onFocus={() => setIsSearchFocused(true)}
           placeholder="Search models..."
-          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          class="w-full px-4 py-2 border border-[var(--border-input)] rounded-lg bg-[var(--bg-app)] text-[var(--text-1)] placeholder-[var(--text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--border-ring)] text-sm"
           autoFocus
         />
       </div>
 
       <div class="overflow-y-auto px-6 pb-6">
         {filteredModels.length === 0 ? (
-          <div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+          <div class="text-center py-8 text-[var(--text-2)] text-sm">
             No models found
           </div>
         ) : (
@@ -128,12 +128,12 @@ export function LlmSelectorModal({ isOpen, onClose, onSelect }: LlmSelectorModal
                     else listItemRefs.current.delete(index);
                   }}
                   onClick={() => handleSelectModel(model)}
-                  class={`w-full text-left px-4 py-3 rounded-lg transition ${
+                  class={`w-full text-left px-4 py-3 rounded-lg transition text-[var(--text-1)] ${
                     isHighlighted
-                      ? "bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
+                      ? "bg-[var(--bg-btn-hover)]"
                       : isSelected
-                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
+                      ? "bg-[var(--bg-btn)]"
+                      : "hover:bg-[var(--bg-btn)]"
                   }`}
                 >
                   <div class="flex items-center justify-between">

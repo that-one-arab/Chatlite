@@ -92,19 +92,19 @@ export function Modal({
       onKeyDown={onKeyDown}
     >
       <div
-        class={`bg-white dark:bg-gray-800 rounded-lg p-6 ${width} max-w-full mx-4 ${maxHeight} overflow-y-auto ${contentClassName} transition-all duration-200 ease-out ${opacityClass} ${scaleClass}`}
+        class={`bg-[var(--modal-bg)] rounded-xl p-6 ${width} max-w-full mx-4 ${maxHeight} overflow-y-auto ${contentClassName} transition-all duration-200 ease-out ${opacityClass} ${scaleClass}`}
       >
         {(title || showCloseButton) && (
           <div class={`flex items-center justify-between mb-4 ${headerClassName}`}>
             {title && (
-              <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+              <h2 class="text-xl font-semibold text-[var(--text-1)]">
                 {title}
               </h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition text-xl leading-none ml-auto"
+                class="text-[var(--text-2)] hover:text-[var(--text-1)] transition text-xl leading-none ml-auto"
                 aria-label="Close"
               >
                 ×

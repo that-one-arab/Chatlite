@@ -28,6 +28,7 @@ export interface Settings {
   storagePath: string;
   lastModel: string;
   zoomLevel?: number;
+  theme?: "light" | "dark" | "blue";
 }
 
 export interface AttachedImage {

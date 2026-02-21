@@ -58,17 +58,14 @@ export function Sidebar() {
   }, []);
 
   const handleCreateChat = () => {
-    // If already in draft mode or current chat is empty, don't do anything
     if (draftChat || (currentChat && currentChat.messages.length === 0)) {
       return;
     }
-    // Clear current chat and enter draft mode - show blank chat area without creating a chat
     selectChat(null);
     setDraftChat({ model: selectedModel });
   };
 
   const handleSelectChat = async (chatId: string) => {
-    // Clear draft mode when selecting an existing chat
     if (draftChat) {
       clearDraft();
     }
@@ -78,7 +75,6 @@ export function Sidebar() {
       setSelectedModel(metadata.model);
     }
 
-    // Load chat if not already loaded
     if (!loadedChats.has(chatId) && storagePath) {
       try {
         const chat = await chatStorage.loadChat(storagePath, chatId);
@@ -97,7 +93,7 @@ export function Sidebar() {
 
   const handleConfirmDelete = async () => {
     if (!chatToDelete) return;
-    
+
     if (storagePath) {
       try {
         await chatStorage.deleteChat(storagePath, chatToDelete.id);
@@ -114,25 +110,29 @@ export function Sidebar() {
     setChatToDelete(null);
     hideModal(MODAL_NAMES.DELETE_CONFIRMATION);
   };
+
   return (
     <div
-      class={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-200 overflow-hidden ${
+      class={`bg-[var(--bg-surface)] border-r border-[var(--border)] flex flex-col transition-all duration-200 overflow-hidden ${
         isSidebarOpen ? "w-64" : "w-12"
       }`}
     >
       {/* Header with toggle + New Chat (when open) */}
       {isSidebarOpen ? (
-        <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 h-[57px]">
+        <div class="px-3 py-2 flex items-center gap-2 h-[57px]">
           <button
             onClick={handleCreateChat}
             disabled={!!draftChat || (!!currentChat && currentChat.messages.length === 0)}
-            class="flex-1 h-9 px-4 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap overflow-hidden"
+            class="flex-1 h-9 px-3 flex items-center gap-2 bg-[var(--bg-btn)] text-[var(--text-1)] rounded-lg hover:bg-[var(--bg-btn-hover)] transition text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            + New Chat
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            <span>New Chat</span>
           </button>
           <button
             onClick={toggleSidebar}
-            class="h-9 w-9 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition border border-gray-200 dark:border-gray-600"
+            class="h-9 w-9 flex items-center justify-center text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--bg-item-hover)] rounded-lg transition"
             title="Collapse sidebar"
           >
             <SidebarToggleIcon isOpen={true} />
@@ -140,10 +140,10 @@ export function Sidebar() {
         </div>
       ) : (
         /* Collapsed: just the toggle button */
-        <div class="px-2 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-center h-[57px]">
+        <div class="px-2 py-2 flex justify-center h-[57px]">
           <button
             onClick={toggleSidebar}
-            class="h-9 w-9 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            class="h-9 w-9 flex items-center justify-center text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--bg-item-hover)] rounded-lg transition"
             title="Expand sidebar"
           >
             <SidebarToggleIcon isOpen={false} />
@@ -154,40 +154,63 @@ export function Sidebar() {
       {/* Chat list - only visible when expanded */}
       {isSidebarOpen && (
         <div class="flex-1 overflow-y-auto">
-          {[...chatMetadata]
-            .sort((a, b) => b.lastModified - a.lastModified)
-            .map((metadata) => (
+          {(() => {
+            const now = Date.now();
+            const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+            const sorted = [...chatMetadata].sort((a, b) => b.lastModified - a.lastModified);
+            const thisWeek = sorted.filter((c) => now - c.lastModified < ONE_WEEK_MS);
+            const older = sorted.filter((c) => now - c.lastModified >= ONE_WEEK_MS);
+
+            const renderChat = (metadata: typeof sorted[0]) => (
               <div
                 key={metadata.id}
-                class={`p-3 mx-2 my-1 rounded-lg cursor-pointer transition ${
+                class={`p-3 mx-2 my-0.5 rounded-lg cursor-pointer transition ${
                   currentChatId === metadata.id
-                    ? "bg-gray-100 dark:bg-gray-700"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    ? "bg-[var(--bg-item-selected)]"
+                    : "hover:bg-[var(--bg-item-hover)]"
                 }`}
                 onClick={() => handleSelectChat(metadata.id)}
               >
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">
+                  <span class="text-sm text-[var(--text-1)] truncate flex-1">
                     {metadata.title}
                   </span>
                   <button
                     onClick={(e) => handleDeleteClick(e as unknown as MouseEvent, metadata.id, metadata.title)}
-                    class="text-gray-400 hover:text-red-500 transition text-lg leading-none"
+                    class="text-[var(--text-2)] hover:text-red-500 transition text-lg leading-none"
                   >
                     ×
                   </button>
                 </div>
               </div>
-            ))}
+            );
+
+            return (
+              <>
+                {thisWeek.length > 0 && (
+                  <>
+                    <div class="px-4 pt-3 pb-1 text-xs font-medium text-[var(--text-3)]">This week</div>
+                    {thisWeek.map(renderChat)}
+                  </>
+                )}
+                {older.length > 0 && (
+                  <>
+                    <div class="px-4 pt-3 pb-1 text-xs font-medium text-[var(--text-3)]">Older</div>
+                    {older.map(renderChat)}
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
       {/* Settings - only visible when expanded */}
       {isSidebarOpen && (
-        <div class="border-t border-gray-200 dark:border-gray-700 p-3">
+        <div class="border-t border-[var(--border)] p-3">
           <button
             onClick={() => showModal(MODAL_NAMES.SETTINGS)}
-            class="w-full px-3 py-2 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            class="w-full px-3 py-2 flex items-center justify-center gap-2 text-sm text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--bg-item-hover)] rounded-lg transition"
           >
             <span>⚙️</span>
             <span>Settings</span>
