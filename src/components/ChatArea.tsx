@@ -306,6 +306,7 @@ export function ChatArea({
 
               <div class="bg-[var(--bg-input)] rounded-2xl border border-[var(--border-input)] overflow-hidden">
                 <textarea
+                  id="chat-input"
                   ref={inputRef}
                   value={input}
                   onInput={(e) => setInput(e.currentTarget.value)}
@@ -452,6 +453,7 @@ export function ChatArea({
 
               <div class="flex gap-2 items-center">
                 <textarea
+                  id="chat-input"
                   ref={inputRef}
                   value={input}
                   onInput={(e) => setInput(e.currentTarget.value)}

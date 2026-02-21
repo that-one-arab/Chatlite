@@ -353,12 +353,7 @@ The title would be used as the chat title in the sidebar.
   useHotkeys(
     {
       onFocusInput: () => {
-        // Find the visible textarea (in the active chat)
-        const textareas = document.querySelectorAll('textarea[placeholder="Message..."]');
-        const visibleTextarea = Array.from(textareas).find(
-          (ta) => (ta as HTMLTextAreaElement).offsetParent !== null
-        ) as HTMLTextAreaElement;
-        visibleTextarea?.focus();
+        (document.getElementById("chat-input") as HTMLTextAreaElement)?.focus();
       },
       onNewChat: handleNewChat,
       onOpenModelDropdown: openLlmSelector,
