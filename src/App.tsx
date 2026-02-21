@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import { appDataDir } from "@tauri-apps/api/path";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { invoke } from "@tauri-apps/api/core";
 import type { Settings } from "@/types";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { chatStorage } from "@/services/chatStorage";
@@ -17,6 +18,7 @@ import {
 import { Sidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { EmptyState } from "@/components/EmptyState";
+import { OllamaStatusBanner } from "@/components/OllamaStatusBanner";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ChatSettingsModal } from "@/components/modals/ChatSettingsModal";
 import { HelpModal } from "@/components/modals/HelpModal";
@@ -45,6 +47,7 @@ function AppContent() {
     toggleSidebar,
     theme,
     setTheme,
+    setOllamaReady,
   } = useUIContext();
   const { toasts, showError, removeToast } = useNotificationContext();
   const { showModal, hideModal, hideAllModals, isModalOpen, isAnyModalOpen } = useModalContext();
@@ -104,8 +107,12 @@ function AppContent() {
       // Load chats
       await loadChats(settings.storagePath);
 
-      // Fetch models
-      await fetchModels(settings.lastModel);
+      // Check if Ollama is reachable, then fetch models
+      const ready = await invoke<boolean>("check_ollama").catch(() => false);
+      setOllamaReady(ready);
+      if (ready) {
+        await fetchModels(settings.lastModel);
+      }
     } catch (error) {
       console.error("Init error:", error);
     }
@@ -376,6 +383,7 @@ The title would be used as the chat title in the sidebar.
       <Sidebar />
 
       <div class="flex-1 flex flex-col relative">
+        <OllamaStatusBanner />
         {currentChat ? (
           <ChatArea
             key={currentChat.id}

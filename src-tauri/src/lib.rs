@@ -1,5 +1,7 @@
 mod storage;
 
+use std::net::TcpStream;
+use std::time::Duration;
 use storage::{Chat, ChatMetadataEntry};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -34,6 +36,16 @@ async fn delete_chat_data(storage_path: String, chat_id: String) -> Result<(), S
     storage::delete_chat_file(&storage_path, &chat_id)
 }
 
+/// Returns true if something is listening on 127.0.0.1:11434 within 500ms.
+#[tauri::command]
+fn check_ollama() -> bool {
+    TcpStream::connect_timeout(
+        &"127.0.0.1:11434".parse().unwrap(),
+        Duration::from_millis(500),
+    )
+    .is_ok()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -45,7 +57,8 @@ pub fn run() {
             load_chat_metadata,
             load_chat_by_id,
             save_chat_data,
-            delete_chat_data
+            delete_chat_data,
+            check_ollama,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

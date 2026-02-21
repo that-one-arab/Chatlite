@@ -266,7 +266,8 @@ export function ChatArea({
       flexDirection: "column",
       position: isActive ? "relative" : "absolute",
       width: "100%",
-      height: "100%",
+      flex: isActive ? 1 : undefined,
+      minHeight: 0,
       top: 0,
       left: 0,
     }}>
