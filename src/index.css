@@ -69,6 +69,29 @@
   --modal-bg:         #252525;
 }
 
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-input);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @keyframes slide-in {
   from {
     transform: translateX(100%);
