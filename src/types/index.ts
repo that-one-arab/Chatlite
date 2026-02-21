@@ -29,6 +29,7 @@ export interface Settings {
   lastModel: string;
   zoomLevel?: number;
   theme?: "light" | "dark" | "blue";
+  passwordEnabled?: boolean;
 }
 
 export interface AttachedImage {

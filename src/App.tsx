@@ -18,6 +18,7 @@ import {
 import { Sidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { EmptyState } from "@/components/EmptyState";
+import { LockScreen } from "@/components/LockScreen";
 import { OllamaStatusBanner } from "@/components/OllamaStatusBanner";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ChatSettingsModal } from "@/components/modals/ChatSettingsModal";
@@ -54,6 +55,8 @@ function AppContent() {
 
   const [storagePath, setStoragePath] = useState("");
   const [customPath, setCustomPath] = useState("");
+  const [isLocked, setIsLocked] = useState(false);
+  const [passwordEnabled, setPasswordEnabled] = useState(false);
   const llmSelectRef = useRef<HTMLButtonElement>(null);
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
 
@@ -94,6 +97,14 @@ function AppContent() {
       // Apply zoom level
       await applyZoom(settings.zoomLevel ?? 1.0);
 
+      // Check password before touching any chat data
+      const locked = await chatStorage.isPasswordEnabled();
+      setPasswordEnabled(locked);
+      if (locked) {
+        setIsLocked(true);
+        return; // storagePath is set; chats load after unlock
+      }
+
       // Ensure storage directory exists
       try {
         const dirExists = await exists(settings.storagePath);
@@ -115,6 +126,25 @@ function AppContent() {
       }
     } catch (error) {
       console.error("Init error:", error);
+    }
+  };
+
+  // Called by LockScreen after a successful unlock
+  const handleUnlock = async () => {
+    setIsLocked(false);
+    try {
+      const dirExists = await exists(storagePath);
+      if (!dirExists) {
+        await mkdir(storagePath, { recursive: true });
+      }
+    } catch (e) {
+      console.error("Error creating directory:", e);
+    }
+    await loadChats(storagePath);
+    const ready = await invoke<boolean>("check_ollama").catch(() => false);
+    setOllamaReady(ready);
+    if (ready) {
+      await fetchModels(selectedModel);
     }
   };
 
@@ -193,6 +223,20 @@ function AppContent() {
     setTheme(newTheme);
     await saveSettings(selectedModel, storagePath, zoomLevel, newTheme);
   }, [selectedModel, storagePath, zoomLevel]);
+
+  const handleEnablePassword = useCallback(async (password: string) => {
+    await chatStorage.enablePassword(password, storagePath);
+    setPasswordEnabled(true);
+  }, [storagePath]);
+
+  const handleDisablePassword = useCallback(async (password: string) => {
+    await chatStorage.disablePassword(password, storagePath);
+    setPasswordEnabled(false);
+  }, [storagePath]);
+
+  const handleChangePassword = useCallback(async (oldPwd: string, newPwd: string) => {
+    await chatStorage.changePassword(oldPwd, newPwd, storagePath);
+  }, [storagePath]);
 
   // Cleanup zoom indicator timeout
   useEffect(() => {
@@ -378,6 +422,14 @@ The title would be used as the chat title in the sidebar.
     { isModalOpen: isAnyModalOpen() }
   );
 
+  if (isLocked) {
+    return (
+      <div class={`h-screen bg-[var(--bg-app)] ${theme === "dark" ? "theme-dark" : theme === "blue" ? "theme-blue" : ""}`}>
+        <LockScreen onUnlock={handleUnlock} />
+      </div>
+    );
+  }
+
   return (
     <div class={`flex h-screen bg-[var(--bg-app)] ${theme === "dark" ? "theme-dark" : theme === "blue" ? "theme-blue" : ""}`}>
       <Sidebar />
@@ -413,11 +465,15 @@ The title would be used as the chat title in the sidebar.
         customPath={customPath}
         zoomLevel={zoomLevel}
         theme={theme}
+        passwordEnabled={passwordEnabled}
         onCustomPathChange={setCustomPath}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onZoomReset={resetZoom}
         onThemeChange={handleThemeChange}
+        onEnablePassword={handleEnablePassword}
+        onDisablePassword={handleDisablePassword}
+        onChangePassword={handleChangePassword}
         onApply={applyStoragePath}
         onClose={() => hideModal(MODAL_NAMES.SETTINGS)}
       />

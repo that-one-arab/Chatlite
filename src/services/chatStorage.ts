@@ -59,6 +59,46 @@ class ChatStorageService {
       throw new Error(`Failed to delete chat: ${error}`);
     }
   }
+
+  async isPasswordEnabled(): Promise<boolean> {
+    return invoke<boolean>("is_password_enabled");
+  }
+
+  async unlockApp(password: string): Promise<void> {
+    try {
+      await invoke("unlock_app", { password });
+    } catch (error) {
+      throw new Error(`${error}`);
+    }
+  }
+
+  async enablePassword(password: string, storagePath: string): Promise<void> {
+    try {
+      await invoke("enable_password", { password, storagePath });
+    } catch (error) {
+      throw new Error(`Failed to enable password: ${error}`);
+    }
+  }
+
+  async disablePassword(password: string, storagePath: string): Promise<void> {
+    try {
+      await invoke("disable_password", { password, storagePath });
+    } catch (error) {
+      throw new Error(`${error}`);
+    }
+  }
+
+  async changePassword(
+    oldPassword: string,
+    newPassword: string,
+    storagePath: string
+  ): Promise<void> {
+    try {
+      await invoke("change_password", { oldPassword, newPassword, storagePath });
+    } catch (error) {
+      throw new Error(`${error}`);
+    }
+  }
 }
 
 export const chatStorage = new ChatStorageService();
