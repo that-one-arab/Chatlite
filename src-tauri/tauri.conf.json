@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "llm-frontend",
+  "productName": "Chatlite",
   "version": "0.1.0",
-  "identifier": "com.llm-frontend.app",
+  "identifier": "com.chatlite.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "LLM Chat",
+        "title": "Chatlite",
         "width": 1200,
         "height": 800
       }

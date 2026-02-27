@@ -24,8 +24,8 @@ const args = process.argv.slice(2);
 const useUpx = args.includes('--upx');
 
 // Paths
-const MACOS_BUNDLE = path.join(__dirname, '../src-tauri/target/release/bundle/macos/llm-frontend.app');
-const MACOS_BINARY = path.join(MACOS_BUNDLE, 'Contents/MacOS/llm-frontend');
+const MACOS_BUNDLE = path.join(__dirname, '../src-tauri/target/release/bundle/macos/Chatlite.app');
+const MACOS_BINARY = path.join(MACOS_BUNDLE, 'Contents/MacOS/chatlite');
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
