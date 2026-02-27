@@ -57,6 +57,7 @@ function AppContent() {
   const [customPath, setCustomPath] = useState("");
   const [isLocked, setIsLocked] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(false);
+  const [hasLoadedChats, setHasLoadedChats] = useState(false);
   const llmSelectRef = useRef<HTMLButtonElement>(null);
   const zoomIndicatorTimeoutRef = useRef<number | null>(null);
 
@@ -150,6 +151,7 @@ function AppContent() {
 
   const loadChats = async (path: string) => {
     try {
+      setHasLoadedChats(false);
       // Initialize storage (runs migration if needed)
       await chatStorage.initializeStorage(path);
 
@@ -159,6 +161,7 @@ function AppContent() {
 
       // Load first chat if available
       if (metadata.length > 0) {
+        clearDraft();
         const firstChat = await chatStorage.loadChat(path, metadata[0].id);
         loadChatIntoMemory(firstChat);
         selectChat(firstChat.id);
@@ -169,8 +172,18 @@ function AppContent() {
     } catch (error) {
       console.error("Error loading chats:", error);
       showError("Failed to load chats");
+    } finally {
+      setHasLoadedChats(true);
     }
   };
+
+  // If there are no chats, show the draft/create chat view immediately.
+  useEffect(() => {
+    if (!hasLoadedChats || isLocked) return;
+    if (chatMetadata.length === 0 && !currentChat && !draftChat) {
+      setDraftChat({ model: selectedModel });
+    }
+  }, [hasLoadedChats, isLocked, chatMetadata.length, currentChat, draftChat, selectedModel, setDraftChat]);
 
 
   const saveSettings = async (model: string, path: string, zoom?: number, themeVal?: "light" | "dark" | "blue") => {
