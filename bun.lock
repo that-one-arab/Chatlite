@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "llm-frontend",
+      "name": "chatlite",
       "dependencies": {
         "@tailwindcss/typography": "^0.5.19",
         "@tauri-apps/api": "^2",

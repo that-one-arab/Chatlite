@@ -32,7 +32,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-app)]">
       <div class="w-80 rounded-2xl bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] p-8">
         <div class="text-center mb-6">
-          <div class="text-2xl font-bold text-[var(--text-1)] mb-1">ChatLite</div>
+          <div class="text-2xl font-bold text-[var(--text-1)] mb-1">Chatlite</div>
           <div class="text-sm text-[var(--text-2)]">Enter your password to unlock</div>
         </div>
 

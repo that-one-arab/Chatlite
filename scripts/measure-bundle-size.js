@@ -41,7 +41,7 @@ function formatSize(bytes) {
 }
 
 // macOS bundle paths
-const bundlePath = path.join(__dirname, '../src-tauri/target/release/bundle/macos/llm-frontend.app');
+const bundlePath = path.join(__dirname, '../src-tauri/target/release/bundle/macos/Chatlite.app');
 const dmgGlob = path.join(__dirname, '../src-tauri/target/release/bundle/dmg');
 
 console.log('Measuring macOS distribution size...\n');
