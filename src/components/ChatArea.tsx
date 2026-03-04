@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
 import type { RefObject } from "preact";
-import type { Chat, AttachedImage } from "@/types";
+import type { Chat, AttachedImage, Message as ChatMessage } from "@/types";
 import { useModelContext, useUIContext, useNotificationContext, useModalContext, MODAL_NAMES, useChatContext } from "@/contexts";
 import { useImageAttachment } from "@/hooks/useImageAttachment";
 import { useMessageStreaming } from "@/hooks/useMessageStreaming";
@@ -199,6 +199,8 @@ export function ChatArea({
     // Prepare message
     const messageText = getMessageText(input, attachedImages.length > 0);
     const imagesToSend = [...attachedImages];
+    const userMessage = createUserMessage(messageText, imagesToSend);
+    let conversationHistory: ChatMessage[] = [userMessage];
 
     // If in draft mode, create the chat first
     let actualChatId = chatId;
@@ -206,12 +208,11 @@ export function ChatArea({
       actualChatId = onCreateChat(chatModel);
       onClearDraft?.();
       // Create initial messages - only add user message, assistant will be added by streamResponse
-      const userMessage = createUserMessage(messageText, imagesToSend);
       updateChatMessages(actualChatId, [userMessage]);
     } else {
       // Update existing chat state using functional update to avoid stale closure
-      const userMessage = createUserMessage(messageText, imagesToSend);
       updateChatMessages(actualChatId, (prev) => [...prev, userMessage]);
+      conversationHistory = [...chatMessages, userMessage];
     }
 
     // Update title for first message
@@ -226,7 +227,7 @@ export function ChatArea({
     // Stream response - pass actualChatId for drafts to ensure updates go to correct chat
     await streamResponse(
       chatSystemPrompt,
-      [{ role: "user" as const, content: messageText, timestamp: Date.now() }],
+      conversationHistory,
       imagesToSend,
       isDraft ? actualChatId : undefined
     );
