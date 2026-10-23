@@ -56,7 +56,6 @@ export function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const hasScrolledInitially = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,7 +155,6 @@ export function ChatArea({
   const { streamResponse, stopGeneration } = useMessageStreaming({
     chatId,
     selectedModel: chatModel,
-    abortControllerRef,
     setStreamingChatId,
     updateChatMessages,
     showError,

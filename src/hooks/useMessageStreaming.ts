@@ -1,6 +1,11 @@
 import { useCallback } from "preact/hooks";
-import type { RefObject } from "preact";
 import type { Message, AttachedImage } from "@/types";
+
+// Module-level registry of in-flight streams, keyed by chat id.
+// ChatArea remounts on every chat switch / draft→chat transition (keyed by
+// chat id in App.tsx), so a component-local ref would lose the controller
+// while the stream keeps running — leaving the Stop button dead.
+const activeControllers = new Map<string, AbortController>();
 
 // Extract base64 data from a data URL
 function extractBase64FromDataUrl(dataUrl: string): string {
@@ -39,7 +44,6 @@ function prepareMessagesForAPI(
 interface UseMessageStreamingParams {
   chatId: string;
   selectedModel: string;
-  abortControllerRef: RefObject<AbortController | null>;
   setStreamingChatId: (chatId: string | null) => void;
   updateChatMessages: (chatId: string, messages: Message[] | ((prev: Message[]) => Message[])) => void;
   showError: (message: string) => void;
@@ -48,7 +52,6 @@ interface UseMessageStreamingParams {
 export function useMessageStreaming({
   chatId,
   selectedModel,
-  abortControllerRef,
   setStreamingChatId,
   updateChatMessages,
   showError,
@@ -65,7 +68,7 @@ export function useMessageStreaming({
       setStreamingChatId(targetChatId);
 
       const controller = new AbortController();
-      abortControllerRef.current = controller;
+      activeControllers.set(targetChatId, controller);
 
       // Add the initial empty assistant message using functional update
       updateChatMessages(targetChatId, (prev) => [
@@ -173,13 +176,14 @@ export function useMessageStreaming({
         }
       } finally {
         setStreamingChatId(null);
-        abortControllerRef.current = null;
+        if (activeControllers.get(targetChatId) === controller) {
+          activeControllers.delete(targetChatId);
+        }
       }
     },
     [
       chatId,
       selectedModel,
-      abortControllerRef,
       setStreamingChatId,
       updateChatMessages,
       showError,
@@ -187,10 +191,8 @@ export function useMessageStreaming({
   );
 
   const stopGeneration = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-  }, [abortControllerRef]);
+    activeControllers.get(chatId)?.abort();
+  }, [chatId]);
 
   return {
     streamResponse,
