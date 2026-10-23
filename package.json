@@ -11,15 +11,17 @@
     "measure-size": "node scripts/measure-bundle-size.js",
     "optimize": "node scripts/optimize-release.js",
     "optimize:upx": "node scripts/optimize-release.js --upx",
-    "build:release": "bun run tauri build && bun run optimize"
+    "build:release": "bun run tauri build && bun run optimize",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
-    "@tailwindcss/typography": "^0.5.19",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-opener": "^2",
-    "markdown-to-jsx": "^9.5.7",
-    "preact": "^10.25.1"
+    "preact": "^10.25.1",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.3",

@@ -1,8 +1,6 @@
 import { useState, memo } from "preact/compat";
-import type { ComponentChildren } from "preact";
-import Markdown from "markdown-to-jsx";
 import type { Message as MessageType } from "@/types";
-import { useUIContext } from "@/contexts";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface MessageProps {
   message: MessageType;
@@ -50,7 +48,6 @@ export const Message = memo(function Message({
   onEditContentChange,
   onImageClick,
 }: MessageProps) {
-  const { theme } = useUIContext();
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
@@ -164,7 +161,7 @@ export const Message = memo(function Message({
 
         {/* Display mode */}
         {!isEditing && (
-          <div className={`break-words text-sm ${isUser ? "whitespace-pre-wrap" : `prose prose-sm ${theme !== "light" ? "prose-invert" : ""} max-w-none`}`}>
+          <div className={`break-words text-sm ${isUser ? "whitespace-pre-wrap" : ""}`}>
             {isThinking && !hasThinking ? (
               <div className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-[var(--text-2)] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
@@ -174,44 +171,7 @@ export const Message = memo(function Message({
             ) : isUser ? (
               message.content
             ) : (
-              <Markdown
-                options={{
-                  forceBlock: true,
-                  overrides: {
-                    pre: {
-                      props: {
-                        className: "bg-[var(--code-block)] text-gray-100 p-3 rounded-lg overflow-x-auto my-2",
-                      },
-                    },
-                    code: {
-                      component: ({ className, children, ...props }: { className?: string; children?: ComponentChildren; [key: string]: unknown }) => {
-                        const isInline = !className;
-                        return isInline ? (
-                          <code
-                            className="bg-[var(--code-inline)] px-1.5 py-0.5 rounded text-sm"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        ) : (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                    },
-                    a: {
-                      props: {
-                        className: "text-blue-500 hover:underline",
-                        target: "_blank",
-                        rel: "noopener noreferrer",
-                      },
-                    },
-                  },
-                }}
-              >
-                {message.content}
-              </Markdown>
+              <MarkdownContent content={message.content} />
             )}
           </div>
         )}
